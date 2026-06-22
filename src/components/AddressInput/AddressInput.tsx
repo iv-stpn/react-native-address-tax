@@ -15,13 +15,14 @@ import type {
 } from "../../types.js";
 import type {
 	AddressFieldConfig,
-	CountryConfig,
+	CountryAddressConfig,
 } from "../../utils/countries.js";
 import {
 	COUNTRY_LIST,
 	getCountryConfig,
 	isEUCountry,
 } from "../../utils/countries.js";
+import { hasRegionalTax } from "../../utils/tax.js";
 import type { ValidationError } from "../../utils/validation.js";
 import { validateAddress } from "../../utils/validation.js";
 
@@ -37,7 +38,7 @@ const EMPTY_VALUE: AddressValue = {
 function computeEffectiveFields(
 	mode: AddressCollectionMode,
 	country: string,
-	countryConfig: CountryConfig | undefined,
+	countryConfig: CountryAddressConfig | undefined,
 ): AddressFieldConfig[] {
 	if (!country || !countryConfig) return [];
 	const allFields = countryConfig.addressFields;
@@ -54,7 +55,7 @@ function computeEffectiveFields(
 		case "minimal":
 		default:
 			if (isEUCountry(country)) return allFields;
-			if (countryConfig.hasRegionalTax)
+			if (hasRegionalTax(country))
 				return allFields.filter((f) => f.field === "state");
 			return [];
 	}

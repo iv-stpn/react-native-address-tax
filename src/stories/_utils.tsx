@@ -4,16 +4,38 @@ import { AddressTaxInput } from "../components/AddressTaxInput/index.js";
 import type { AddressValue, ConsumptionTaxValue, TaxType } from "../types.js";
 import {
 	type ConsumptionTaxOutcome,
-	type ConsumptionTaxTreatment,
 	computeConsumptionTaxOutcome,
-} from "./tax.js";
+	type TaxOutcomeFlags,
+} from "../utils/tax.js";
 
 // ---------------------------------------------------------------------------
 // ConsumptionTaxPanel
 // ---------------------------------------------------------------------------
 
+/** Display-only categorization derived from the outcome flags. */
+type TaxCategory =
+	| "reverse-charge"
+	| "standard"
+	| "zero-rated"
+	| "regional-us"
+	| "regional-ca"
+	| "outside"
+	| "no-nexus"
+	| "none";
+
+function categorize(o: ConsumptionTaxOutcome): TaxCategory {
+	if (o.taxSystem === null) return "none";
+	if (o.taxSystem === "oss") {
+		return o.flags.buyerSelfAccounts ? "reverse-charge" : "standard";
+	}
+	if (o.flags.invoiceAtZero && o.flags.buyerSelfAccounts) return "zero-rated";
+	if (o.flags.localSurcharge) return "regional-us";
+	if (o.flags.regionalRates) return "regional-ca";
+	return "outside";
+}
+
 const COLORS: Record<
-	ConsumptionTaxTreatment,
+	TaxCategory,
 	{ bg: string; border: string; text: string; badge: string }
 > = {
 	"reverse-charge": {
@@ -34,7 +56,19 @@ const COLORS: Record<
 		text: "#1e40af",
 		badge: "#2563eb",
 	},
-	"outside-eu": {
+	"regional-us": {
+		bg: "#f3f4f6",
+		border: "#9ca3af",
+		text: "#374151",
+		badge: "#6b7280",
+	},
+	"regional-ca": {
+		bg: "#f3f4f6",
+		border: "#9ca3af",
+		text: "#374151",
+		badge: "#6b7280",
+	},
+	outside: {
 		bg: "#f3f4f6",
 		border: "#9ca3af",
 		text: "#374151",
@@ -46,7 +80,7 @@ const COLORS: Record<
 		text: "#6b21a8",
 		badge: "#9333ea",
 	},
-	"no-country": {
+	none: {
 		bg: "#f9fafb",
 		border: "#e5e7eb",
 		text: "#9ca3af",
@@ -54,13 +88,58 @@ const COLORS: Record<
 	},
 };
 
+const FLAG_ROWS: { key: keyof TaxOutcomeFlags; label: string }[] = [
+	{ key: "buyerSelfAccounts", label: "Buyer self-accounts" },
+	{ key: "invoiceAtZero", label: "Invoice at 0%" },
+	{ key: "regionalRates", label: "Regional rates" },
+	{ key: "localSurcharge", label: "Local surcharge may apply" },
+];
+
 function formatRate(rate: number | null): string {
 	if (rate === null) return "—";
 	return `${rate}%`;
 }
 
-function ConsumptionTaxPanel({ outcome }: { outcome: ConsumptionTaxOutcome }) {
-	const c = COLORS[outcome.treatment];
+function buildHeadline(
+	category: TaxCategory,
+	o: ConsumptionTaxOutcome,
+): string {
+	const { taxName, rate, state } = o;
+	switch (category) {
+		case "none":
+			return "No country selected";
+		case "no-nexus":
+			return "No nexus — not collecting";
+		case "reverse-charge":
+			return "Reverse Charge";
+		case "zero-rated":
+			return "Zero-rated Export";
+		case "standard":
+			return `Standard ${taxName} — ${rate}%`;
+		case "regional-us":
+			if (!state) return "US Sales Tax — select state";
+			if (rate === null) return `No ${taxName} — ${state}`;
+			return `${taxName} — ${state} ${rate}%`;
+		case "regional-ca":
+			if (!state) return "Canadian GST/HST — select province";
+			if (rate === null) return `${taxName} — ${state}`;
+			return `${taxName} — ${state} ${rate}%`;
+		default:
+			if (!taxName) return "Outside EU";
+			if (rate === null) return `Outside EU — ${taxName}`;
+			return `Outside EU — ${taxName} ${rate}%`;
+	}
+}
+
+function ConsumptionTaxPanel({
+	outcome,
+	noNexus = false,
+}: {
+	outcome: ConsumptionTaxOutcome;
+	noNexus?: boolean;
+}) {
+	const category: TaxCategory = noNexus ? "no-nexus" : categorize(outcome);
+	const c = COLORS[category];
 	return (
 		<div
 			style={{
@@ -75,7 +154,7 @@ function ConsumptionTaxPanel({ outcome }: { outcome: ConsumptionTaxOutcome }) {
 					display: "flex",
 					alignItems: "center",
 					gap: 10,
-					marginBottom: 6,
+					marginBottom: 8,
 				}}
 			>
 				<span
@@ -92,7 +171,7 @@ function ConsumptionTaxPanel({ outcome }: { outcome: ConsumptionTaxOutcome }) {
 					TAX
 				</span>
 				<span style={{ fontWeight: 600, color: c.text, fontSize: 14 }}>
-					{outcome.headline}
+					{buildHeadline(category, outcome)}
 				</span>
 				<span
 					style={{
@@ -106,9 +185,50 @@ function ConsumptionTaxPanel({ outcome }: { outcome: ConsumptionTaxOutcome }) {
 					{formatRate(outcome.rate)}
 				</span>
 			</div>
-			<p style={{ margin: 0, fontSize: 12, color: c.text, lineHeight: 1.5 }}>
-				{outcome.detail}
-			</p>
+			<table
+				style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
+			>
+				<tbody>
+					<tr style={{ borderTop: `1px solid ${c.border}40` }}>
+						<td style={{ padding: "3px 0", color: c.text }}>
+							Collection threshold
+						</td>
+						<td
+							style={{
+								textAlign: "right",
+								fontWeight: 700,
+								color: c.badge,
+								fontVariantNumeric: "tabular-nums",
+							}}
+						>
+							{outcome.collectionThreshold === null ? (
+								<span style={{ color: `${c.text}60` }}>—</span>
+							) : outcome.collectionThreshold === 0 ? (
+								"None"
+							) : (
+								outcome.collectionThreshold.toLocaleString()
+							)}
+						</td>
+					</tr>
+					{FLAG_ROWS.map(({ key, label }) => {
+						const on = outcome.flags[key];
+						return (
+							<tr key={key} style={{ borderTop: `1px solid ${c.border}40` }}>
+								<td style={{ padding: "3px 0", color: c.text }}>{label}</td>
+								<td
+									style={{
+										textAlign: "right",
+										fontWeight: 700,
+										color: on ? c.badge : `${c.text}60`,
+									}}
+								>
+									{on ? "✓" : "✗"}
+								</td>
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
 		</div>
 	);
 }
@@ -205,21 +325,14 @@ export function AddressTaxWrapper({
 
 	const nexusList = hasNexus ? undefined : [];
 
-	const outcome =
-		!hasNexus && (addressValue.country || defaultCountry)
-			? {
-					treatment: "no-nexus" as const,
-					headline: "No nexus — not collecting",
-					rate: null,
-					detail:
-						"You have no tax nexus in this country. No consumption tax collection is required from your side.",
-				}
-			: computeConsumptionTaxOutcome(
-					addressValue.country,
-					effectiveIsBusiness,
-					hasConsumptionTaxId,
-					addressValue.state,
-				);
+	const hasCountry = !!(addressValue.country || defaultCountry);
+	const noNexus = !hasNexus && hasCountry;
+	const outcome = computeConsumptionTaxOutcome(
+		addressValue.country,
+		effectiveIsBusiness,
+		hasConsumptionTaxId,
+		addressValue.state,
+	);
 
 	return (
 		<div style={containerStyle}>
@@ -253,7 +366,7 @@ export function AddressTaxWrapper({
 				</label>
 			</div>
 			<span style={sectionLabelStyle}>Tax to collect</span>
-			<ConsumptionTaxPanel outcome={outcome} />
+			<ConsumptionTaxPanel outcome={outcome} noNexus={noNexus} />
 			<span style={sectionLabelStyle}>Address value</span>
 			<pre style={jsonStyle}>{JSON.stringify(addressValue, null, 2)}</pre>
 			<span style={sectionLabelStyle}>Tax value</span>

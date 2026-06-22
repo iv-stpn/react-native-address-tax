@@ -16,10 +16,12 @@ export type {
 export type {
 	AddressFieldConfig,
 	AddressFieldKey,
-	CountryConfig,
+	CountryAddressConfig,
+	CountryCode,
 } from "./utils/countries.js";
 export {
 	COUNTRIES,
+	COUNTRY_CODES,
 	COUNTRY_LIST,
 	getConsumptionTaxLabel,
 	getCountryConfig,

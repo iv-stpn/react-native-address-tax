@@ -1,5 +1,6 @@
 import type { AddressValue } from "../types.js";
 import { getCountryConfig } from "./countries.js";
+import { getConsumptionTaxConfig } from "./tax.js";
 
 export interface ValidationError {
 	field: string;
@@ -15,8 +16,8 @@ export function validateConsumptionTax(
 	consumptionTaxId: string,
 	countryCode: string,
 ): boolean {
-	const config = getCountryConfig(countryCode);
-	if (!config) return false;
+	const config = getConsumptionTaxConfig(countryCode);
+	if (!config?.consumptionTaxPattern) return false;
 	const normalized = consumptionTaxId.trim().toUpperCase().replace(/\s/g, "");
 	return config.consumptionTaxPattern.test(normalized);
 }

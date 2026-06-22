@@ -1,16 +1,78 @@
-export interface CountryConfig {
-	code: string;
+// ISO 3166-1 alpha-2 codes for the countries the library currently supports:
+// the 27 EU member states plus other developed economies. The rest of the world
+// will be added later; for now unknown codes fall through to the generic path.
+export const COUNTRY_CODES = [
+	// EU-27
+	"AT",
+	"BE",
+	"BG",
+	"CY",
+	"CZ",
+	"DE",
+	"DK",
+	"EE",
+	"ES",
+	"FI",
+	"FR",
+	"GR",
+	"HR",
+	"HU",
+	"IE",
+	"IT",
+	"LT",
+	"LU",
+	"LV",
+	"MT",
+	"NL",
+	"PL",
+	"PT",
+	"RO",
+	"SE",
+	"SI",
+	"SK",
+	// Other European + developed economies
+	"GB",
+	"CH",
+	"US",
+	"CA",
+	"AU",
+	"JP",
+	"NO",
+	"IS",
+	"LI",
+	"AD",
+	"MC",
+	"SM",
+	"AL",
+	"BA",
+	"GE",
+	"MD",
+	"ME",
+	"MK",
+	"RS",
+	"TR",
+	"UA",
+	"XK",
+	"NZ",
+	"KR",
+	"SG",
+	"IL",
+	"TW",
+	"AE",
+	"HK",
+	"MO",
+] as const;
+
+export type CountryCode = (typeof COUNTRY_CODES)[number];
+
+export interface CountryAddressConfig {
+	code: CountryCode;
 	name: string;
 	addressFields: AddressFieldConfig[];
-	consumptionTaxPrefix: string;
-	consumptionTaxPattern: RegExp;
-	consumptionTaxExample: string;
 	postalCodePattern?: RegExp;
 	postalCodeLabel?: string;
 	stateLabel?: string;
 	hasStates?: boolean;
-	/** True when tax rates/rules vary by state or province (e.g. US sales tax, CA GST/HST/PST). */
-	hasRegionalTax?: boolean;
 }
 
 export interface AddressFieldConfig {
@@ -254,13 +316,12 @@ const GB_NATIONS = [
 // Country configs
 // ---------------------------------------------------------------------------
 
-export const COUNTRIES: Record<string, CountryConfig> = {
+// Address layouts are only defined for a curated subset of countries; the rest
+// fall back to a generic form. Hence Partial over the full CountryCode union.
+export const COUNTRIES: Partial<Record<CountryCode, CountryAddressConfig>> = {
 	AT: {
 		code: "AT",
 		name: "Austria",
-		consumptionTaxPrefix: "ATU",
-		consumptionTaxPattern: /^ATU\d{8}$/,
-		consumptionTaxExample: "ATU12345678",
 		postalCodePattern: /^\d{4}$/,
 		addressFields: [
 			{ field: "line1", label: "Street and number", required: true },
@@ -277,9 +338,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	BE: {
 		code: "BE",
 		name: "Belgium",
-		consumptionTaxPrefix: "BE",
-		consumptionTaxPattern: /^BE0\d{9}$/,
-		consumptionTaxExample: "BE0123456789",
 		postalCodePattern: /^\d{4}$/,
 		addressFields: [
 			{ field: "line1", label: "Street and number", required: true },
@@ -296,9 +354,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	CH: {
 		code: "CH",
 		name: "Switzerland",
-		consumptionTaxPrefix: "CHE",
-		consumptionTaxPattern: /^CHE-\d{3}\.\d{3}\.\d{3}(MWST|TVA|IVA)?$/,
-		consumptionTaxExample: "CHE-123.456.789MWST",
 		postalCodePattern: /^\d{4}$/,
 		addressFields: [
 			{ field: "line1", label: "Street and number", required: true },
@@ -315,9 +370,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	DE: {
 		code: "DE",
 		name: "Germany",
-		consumptionTaxPrefix: "DE",
-		consumptionTaxPattern: /^DE\d{9}$/,
-		consumptionTaxExample: "DE123456789",
 		postalCodePattern: /^\d{5}$/,
 		addressFields: [
 			{ field: "line1", label: "Street and house number", required: true },
@@ -334,9 +386,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	ES: {
 		code: "ES",
 		name: "Spain",
-		consumptionTaxPrefix: "ES",
-		consumptionTaxPattern: /^ES[A-Z0-9]\d{7}[A-Z0-9]$/,
-		consumptionTaxExample: "ESA12345678",
 		postalCodePattern: /^\d{5}$/,
 		hasStates: true,
 		stateLabel: "Province",
@@ -361,9 +410,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	FR: {
 		code: "FR",
 		name: "France",
-		consumptionTaxPrefix: "FR",
-		consumptionTaxPattern: /^FR[A-Z0-9]{2}\d{9}$/,
-		consumptionTaxExample: "FRXX123456789",
 		postalCodePattern: /^\d{5}$/,
 		addressFields: [
 			{ field: "line1", label: "Number and street name", required: true },
@@ -380,9 +426,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	GB: {
 		code: "GB",
 		name: "United Kingdom",
-		consumptionTaxPrefix: "GB",
-		consumptionTaxPattern: /^GB(\d{9}|\d{12}|(GD|HA)\d{3})$/,
-		consumptionTaxExample: "GB123456789",
 		postalCodePattern: /^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$/i,
 		postalCodeLabel: "Postcode",
 		hasStates: true,
@@ -408,9 +451,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	IT: {
 		code: "IT",
 		name: "Italy",
-		consumptionTaxPrefix: "IT",
-		consumptionTaxPattern: /^IT\d{11}$/,
-		consumptionTaxExample: "IT12345678901",
 		postalCodePattern: /^\d{5}$/,
 		hasStates: true,
 		stateLabel: "Region",
@@ -430,9 +470,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	NL: {
 		code: "NL",
 		name: "Netherlands",
-		consumptionTaxPrefix: "NL",
-		consumptionTaxPattern: /^NL\d{9}B\d{2}$/,
-		consumptionTaxExample: "NL123456789B01",
 		postalCodePattern: /^\d{4}\s?[A-Z]{2}$/i,
 		addressFields: [
 			{ field: "line1", label: "Street and house number", required: true },
@@ -449,9 +486,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	PL: {
 		code: "PL",
 		name: "Poland",
-		consumptionTaxPrefix: "PL",
-		consumptionTaxPattern: /^PL\d{10}$/,
-		consumptionTaxExample: "PL1234567890",
 		postalCodePattern: /^\d{2}-\d{3}$/,
 		addressFields: [
 			{ field: "line1", label: "Street and number", required: true },
@@ -468,14 +502,10 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	US: {
 		code: "US",
 		name: "United States",
-		consumptionTaxPrefix: "",
-		consumptionTaxPattern: /^\d{2}-\d{7}$/,
-		consumptionTaxExample: "12-3456789",
 		postalCodePattern: /^\d{5}(-\d{4})?$/,
 		postalCodeLabel: "ZIP code",
 		hasStates: true,
 		stateLabel: "State",
-		hasRegionalTax: true,
 		addressFields: [
 			{ field: "line1", label: "Address line 1", required: true },
 			{
@@ -496,14 +526,10 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	CA: {
 		code: "CA",
 		name: "Canada",
-		consumptionTaxPrefix: "",
-		consumptionTaxPattern: /^\d{9}RT\d{4}$/,
-		consumptionTaxExample: "123456789RT0001",
 		postalCodePattern: /^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/i,
 		postalCodeLabel: "Postal code",
 		hasStates: true,
 		stateLabel: "Province/Territory",
-		hasRegionalTax: true,
 		addressFields: [
 			{ field: "line1", label: "Address line 1", required: true },
 			{ field: "line2", label: "Address line 2", required: false },
@@ -525,9 +551,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	AU: {
 		code: "AU",
 		name: "Australia",
-		consumptionTaxPrefix: "",
-		consumptionTaxPattern: /^\d{11}$/,
-		consumptionTaxExample: "12345678901",
 		postalCodePattern: /^\d{4}$/,
 		postalCodeLabel: "Postcode",
 		hasStates: true,
@@ -553,9 +576,6 @@ export const COUNTRIES: Record<string, CountryConfig> = {
 	JP: {
 		code: "JP",
 		name: "Japan",
-		consumptionTaxPrefix: "T",
-		consumptionTaxPattern: /^T\d{13}$/,
-		consumptionTaxExample: "T1234567890123",
 		postalCodePattern: /^\d{3}-\d{4}$/,
 		postalCodeLabel: "Postal code",
 		hasStates: true,
@@ -584,8 +604,10 @@ export const COUNTRY_LIST = Object.values(COUNTRIES).sort((a, b) =>
 	a.name.localeCompare(b.name),
 );
 
-export function getCountryConfig(code: string): CountryConfig | undefined {
-	return COUNTRIES[code.toUpperCase()];
+export function getCountryConfig(
+	code: string,
+): CountryAddressConfig | undefined {
+	return COUNTRIES[code.toUpperCase() as CountryCode];
 }
 
 // All 27 EU member states as of 2024.

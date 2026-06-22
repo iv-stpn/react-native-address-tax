@@ -6,10 +6,8 @@ import type {
 	RenderContainerProps,
 	RenderInputProps,
 } from "../../types.js";
-import {
-	getConsumptionTaxLabel,
-	getCountryConfig,
-} from "../../utils/countries.js";
+import { getConsumptionTaxLabel } from "../../utils/countries.js";
+import { getConsumptionTaxConfig } from "../../utils/tax.js";
 import {
 	normalizeConsumptionTax,
 	validateConsumptionTax,
@@ -59,7 +57,7 @@ export function AddressTaxInput({
 			: internalHasTaxIdentifier;
 
 	const country = addressValue.country || defaultCountry || "";
-	const countryConfig = getCountryConfig(country);
+	const taxConfig = getConsumptionTaxConfig(country);
 	const isInNexus = !nexusList || nexusList.includes(country);
 	const showTaxFields = isBusiness && isInNexus && !!country;
 
@@ -85,7 +83,7 @@ export function AddressTaxInput({
 			? !validateConsumptionTax(consumptionTaxId, country)
 			: false;
 	const consumptionTaxError = consumptionTaxInvalid
-		? `Invalid ${consumptionTaxLabel} format. Expected: ${countryConfig?.consumptionTaxExample ?? ""}.`
+		? `Invalid ${consumptionTaxLabel} format. Expected: ${taxConfig?.consumptionTaxExample ?? ""}.`
 		: undefined;
 
 	function handleBusinessChange(e: ChangeEvent<HTMLInputElement>) {
@@ -287,7 +285,7 @@ export function AddressTaxInput({
 								value: consumptionTaxId,
 								onChange: handleConsumptionTaxChange,
 								onBlur: handleConsumptionTaxBlur,
-								placeholder: countryConfig?.consumptionTaxExample,
+								placeholder: taxConfig?.consumptionTaxExample,
 								disabled,
 								required: consumptionTaxRequired,
 								"aria-invalid": consumptionTaxInvalid,
