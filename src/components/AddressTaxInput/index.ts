@@ -1,4 +1,4 @@
 export {
-	AddressTaxInput,
-	type AddressTaxInputProps,
+  AddressTaxInput,
+  type AddressTaxInputProps,
 } from "./AddressTaxInput";

@@ -2,7 +2,7 @@ import type { Story, StoryDefault } from "@ladle/react";
 import { AddressWrapper } from "./_utils";
 
 export default {
-	title: "Address",
+  title: "Address",
 } satisfies StoryDefault;
 
 export const AL: Story = () => <AddressWrapper defaultCountry="AL" />;

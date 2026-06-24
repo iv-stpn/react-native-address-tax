@@ -2,7 +2,7 @@ import type { Story, StoryDefault } from "@ladle/react";
 import { AddressTaxWrapper } from "./_utils";
 
 export default {
-	title: "Address+Tax without Country",
+  title: "Address+Tax without Country",
 } satisfies StoryDefault;
 
 export const B2B: Story = () => <AddressTaxWrapper taxType="business" />;
