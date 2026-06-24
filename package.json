@@ -14,7 +14,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/USERNAME/react-address-tax.git"
+    "url": "https://github.com/iv-stpn/react-address-tax.git"
   },
   "type": "module",
   "main": "./dist/index.js",
