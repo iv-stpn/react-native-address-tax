@@ -26,6 +26,7 @@ const HEADERS = [
   "Last verified",
   "Address format",
   "Consumption tax",
+  "Nexus minimum",
   "VAT number",
   "Postal code",
   "Level 1 labels",
@@ -66,6 +67,18 @@ function vatCell(code: string): string {
   if (!cfg?.consumptionTaxPattern) return "❌";
   const example = cfg.consumptionTaxExample ?? cfg.consumptionTaxPattern.source;
   return `✅ ${cfg.taxName} (${example})`;
+}
+
+// Registration threshold above which a seller must collect consumption tax in
+// the country (the "nexus minimum"). collectionThreshold: 0 = always collect on
+// nexus; positive = threshold in local currency; null = seller never collects.
+function nexusCell(code: string, currencyCode: string | undefined): string {
+  const t = getConsumptionTaxConfig(code)?.collectionThreshold;
+  if (t === undefined) return "❌";
+  if (t == null) return "Seller never collects";
+  if (t === 0) return "Always";
+  const amount = t.toLocaleString("en-US");
+  return currencyCode ? `${currencyCode} ${amount}` : amount;
 }
 
 function levelCell(label: { en?: string; local?: string } | null | undefined): string {
@@ -117,6 +130,7 @@ function buildRows(): Row[] {
         "Last verified": "—",
         "Address format": addressFmt,
         "Consumption tax": tax,
+        "Nexus minimum": nexusCell(code, c.currencyCode),
         "VAT number": vat,
         "Postal code": postal,
         "Level 1 labels": l1,
@@ -136,6 +150,7 @@ function buildRows(): Row[] {
             "Last verified": "—",
             "Address format": "↳",
             "Consumption tax": rate == null ? "None ✅" : `${rate}% ✅`,
+            "Nexus minimum": "↳",
             "VAT number": "↳",
             "Postal code": "↳",
             "Level 1 labels": "↳",
@@ -148,7 +163,7 @@ function buildRows(): Row[] {
   return rows;
 }
 
-const sig = (cells: Record<string, string>) => DATA_COLS.map((c) => cells[c]).join("§");
+const sigOver = (cells: Record<string, string>, cols: readonly string[]) => cols.map((c) => cells[c] ?? "").join("§");
 
 interface PrevRow {
   lastVerified: string;
@@ -156,11 +171,16 @@ interface PrevRow {
   hadBang: boolean;
 }
 
-/** Parse the existing managed table so we can preserve dates and detect diffs. */
-function parsePrev(block: string): Map<string, PrevRow> {
+/**
+ * Parse the existing managed table so we can preserve dates and detect diffs.
+ * Returns the parsed rows plus the subset of DATA_COLS that were present in the
+ * previous table — diffs are computed only over those, so adding a brand-new
+ * column never spuriously flags every row.
+ */
+function parsePrev(block: string): { map: Map<string, PrevRow>; dataCols: string[] } {
   const map = new Map<string, PrevRow>();
   const lines = block.split("\n").filter((l) => l.trim().startsWith("|"));
-  if (lines.length < 2) return map;
+  if (lines.length < 2) return { map, dataCols: [...DATA_COLS] };
   const cols = lines[0]
     .split("|")
     .slice(1, -1)
@@ -168,7 +188,8 @@ function parsePrev(block: string): Map<string, PrevRow> {
   const idx = (name: string) => cols.indexOf(name);
   const codeI = idx("Code");
   const dateI = idx("Last verified");
-  if (codeI < 0) return map;
+  const dataCols = DATA_COLS.filter((c) => idx(c) >= 0);
+  if (codeI < 0) return { map, dataCols };
   for (const line of lines.slice(2)) {
     const cells = line
       .split("|")
@@ -178,22 +199,19 @@ function parsePrev(block: string): Map<string, PrevRow> {
     const rawCode = cells[codeI];
     const hadBang = rawCode.includes("❗");
     const code = rawCode.replace("❗", "").trim();
-    const signature = DATA_COLS.map((c) => {
-      const i = idx(c);
-      return i >= 0 ? cells[i] : "";
-    }).join("§");
+    const signature = dataCols.map((c) => cells[idx(c)]).join("§");
     map.set(code, { lastVerified: dateI >= 0 ? cells[dateI] : "—", signature, hadBang });
   }
-  return map;
+  return { map, dataCols };
 }
 
-function renderTable(rows: Row[], prev: Map<string, PrevRow>, bootstrap: boolean): string {
+function renderTable(rows: Row[], prev: Map<string, PrevRow>, dataCols: string[], bootstrap: boolean): string {
   const header = `| ${HEADERS.join(" | ")} |`;
   const divider = `| ${HEADERS.map(() => "---").join(" | ")} |`;
   const body = rows.map((r) => {
     const before = prev.get(r.code);
     if (before) r.cells["Last verified"] = before.lastVerified;
-    const changed = !before || before.signature !== sig(r.cells);
+    const changed = !before || before.signature !== sigOver(r.cells, dataCols);
     // ❗ is sticky: keep an existing flag, and raise a new one when data changed
     // (but never on the initial bootstrap run — there is nothing to diff against).
     const bang = bootstrap ? false : (before?.hadBang ?? false) || changed;
@@ -233,8 +251,8 @@ function main() {
     md = md.replace(/\n+$/, "\n");
   }
 
-  const prev = parsePrev(prevBlock);
-  const table = renderTable(rows, prev, bootstrap);
+  const { map: prev, dataCols } = parsePrev(prevBlock);
+  const table = renderTable(rows, prev, dataCols, bootstrap);
   const block = `${START}\n\n${NOTE}\n\n${table}\n\n${END}`;
 
   if (startsAt >= 0 && endsAt > startsAt) {
@@ -244,7 +262,9 @@ function main() {
   }
 
   require("node:fs").writeFileSync(README, md);
-  const flagged = rows.filter((r) => prev.get(r.code)?.hadBang || (!bootstrap && prev.get(r.code)?.signature !== sig(r.cells)));
+  const flagged = rows.filter(
+    (r) => prev.get(r.code)?.hadBang || (!bootstrap && prev.get(r.code)?.signature !== sigOver(r.cells, dataCols)),
+  );
   console.log(`Wrote ${rows.length} rows${bootstrap ? " (bootstrap, no flags)" : `, ${flagged.length} flagged ❗`}.`);
 }
 
