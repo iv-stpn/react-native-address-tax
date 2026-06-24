@@ -43,7 +43,7 @@
     "prepublishOnly": "bun run build && bun run typecheck",
     "ladle": "ladle serve",
     "gen:geonames": "bun run scripts/gen-geonames.ts",
-    "gen:admin1": "bun run scripts/gen-admin1-options.ts",
+    "gen:level1": "bun run scripts/gen-level1-codes.ts",
     "gen:countries": "bun run scripts/gen-countries.ts"
   },
   "peerDependencies": {

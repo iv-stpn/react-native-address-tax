@@ -1,16 +1,25 @@
 import type { Story, StoryDefault } from "@ladle/react";
-import { type ReactNode, useState } from "react";
-import { AddressInput } from "../components/AddressInput/index.js";
-import { AddressTaxInput } from "../components/AddressTaxInput/index.js";
+import {
+	type ReactNode,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { AddressInput } from "../components/AddressInput/index";
+import { AddressTaxInput } from "../components/AddressTaxInput/index";
+import type { AddressValue } from "../utils/address";
+import type { ConsumptionTaxValue } from "../utils/tax";
+
+import "./tailwind.css";
+
 import type {
-	AddressValue,
-	ConsumptionTaxValue,
 	RenderCheckboxProps,
 	RenderContainerProps,
 	RenderInputProps,
 	RenderSelectProps,
-} from "../types.js";
-import "./tailwind.css";
+} from "../components/AddressInput";
 
 export default {
 	title: "Tailwind",
@@ -44,7 +53,232 @@ function TailwindInput(props: RenderInputProps) {
 	);
 }
 
+// ---------------------------------------------------------------------------
+// Custom country dropdown — no native <select>.
+//
+// Renders a button + popup listbox styled with Tailwind, each option prefixed
+// with its flag from purecatamphetamine.github.io/country-flag-icons. Country
+// codes from the option list are ISO alpha-2, which is exactly what that flag
+// CDN keys on. AddressInput's onChange only reads `event.target.value`, so we
+// hand it a minimal synthetic event.
+// ---------------------------------------------------------------------------
+
+function flagUrl(code: string) {
+	return `https://purecatamphetamine.github.io/country-flag-icons/3x2/${code.toUpperCase()}.svg`;
+}
+
+function Flag({ code, label }: { code: string; label: string }) {
+	return (
+		<img
+			src={flagUrl(code)}
+			alt=""
+			aria-hidden="true"
+			width={20}
+			height={15}
+			loading="lazy"
+			className="h-3.75 w-5 shrink-0 rounded-xs object-cover ring-1 ring-slate-900/10"
+			title={label}
+		/>
+	);
+}
+
+function CountrySelect(
+	props: RenderSelectProps & { placeholderOverride?: string },
+) {
+	const { options, value, onChange, disabled } = props;
+	const placeholder = props.placeholderOverride ?? props.placeholder;
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState("");
+	const [activeIndex, setActiveIndex] = useState(0);
+	const rootRef = useRef<HTMLDivElement>(null);
+	const inputRef = useRef<HTMLInputElement>(null);
+	const listRef = useRef<HTMLUListElement>(null);
+	const listboxId = useId();
+
+	const selected = useMemo(
+		() => options.find((o) => o.value === value),
+		[options, value],
+	);
+
+	const filtered = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return options;
+		return options.filter(
+			(o) =>
+				o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
+		);
+	}, [options, query]);
+
+	// Close on outside click.
+	useEffect(() => {
+		if (!open) return;
+		function onDocClick(e: MouseEvent) {
+			if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+		}
+		document.addEventListener("mousedown", onDocClick);
+		return () => document.removeEventListener("mousedown", onDocClick);
+	}, [open]);
+
+	// When opening, focus the search box and reset the highlighted row.
+	useEffect(() => {
+		if (open) {
+			setQuery("");
+			const sel = options.findIndex((o) => o.value === value);
+			setActiveIndex(sel >= 0 ? sel : 0);
+			inputRef.current?.focus();
+		}
+	}, [open, options, value]);
+
+	// Keep the highlighted row in view.
+	useEffect(() => {
+		if (!open) return;
+		const node = listRef.current?.children[activeIndex] as
+			| HTMLElement
+			| undefined;
+		node?.scrollIntoView({ block: "nearest" });
+	}, [open, activeIndex]);
+
+	function commit(code: string) {
+		onChange({
+			target: { value: code },
+		} as unknown as Parameters<typeof onChange>[0]);
+		setOpen(false);
+	}
+
+	function onKeyDown(e: React.KeyboardEvent) {
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			if (!open) return setOpen(true);
+			setActiveIndex((i) => Math.min(i + 1, filtered.length - 1));
+		} else if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setActiveIndex((i) => Math.max(i - 1, 0));
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			const opt = filtered[activeIndex];
+			if (open && opt) commit(opt.value);
+			else setOpen(true);
+		} else if (e.key === "Escape") {
+			setOpen(false);
+		}
+	}
+
+	return (
+		<div ref={rootRef} className="relative">
+			<button
+				type="button"
+				id={props.id}
+				disabled={disabled}
+				aria-haspopup="listbox"
+				aria-expanded={open}
+				aria-controls={open ? listboxId : undefined}
+				aria-required={props.required}
+				aria-invalid={props["aria-invalid"]}
+				aria-describedby={props["aria-describedby"]}
+				onClick={() => !disabled && setOpen((o) => !o)}
+				onKeyDown={onKeyDown}
+				className="flex w-full items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 aria-invalid:border-red-500 aria-invalid:focus:ring-red-500/30"
+			>
+				{selected ? (
+					<>
+						<Flag code={selected.value} label={selected.label} />
+						<span className="truncate">{selected.label}</span>
+					</>
+				) : (
+					<span className="truncate text-slate-400">
+						{placeholder ?? "Select a country"}
+					</span>
+				)}
+				<svg
+					className={`ml-auto h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					aria-hidden="true"
+				>
+					<path
+						fillRule="evenodd"
+						d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z"
+						clipRule="evenodd"
+					/>
+				</svg>
+			</button>
+
+			{open ? (
+				<div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+					<div className="border-b border-slate-100 p-2">
+						<input
+							ref={inputRef}
+							type="text"
+							value={query}
+							onChange={(e) => {
+								setQuery(e.target.value);
+								setActiveIndex(0);
+							}}
+							onKeyDown={onKeyDown}
+							placeholder="Search countries…"
+							className="w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+						/>
+					</div>
+					<ul
+						ref={listRef}
+						id={listboxId}
+						role="listbox"
+						aria-label="Country"
+						className="max-h-64 overflow-y-auto py-1"
+					>
+						{filtered.length === 0 ? (
+							<li className="px-3 py-6 text-center text-sm text-slate-400">
+								No matches
+							</li>
+						) : (
+							filtered.map((opt, i) => {
+								const isSelected = opt.value === value;
+								const isActive = i === activeIndex;
+								return (
+									<li
+										key={opt.value}
+										role="option"
+										aria-selected={isSelected}
+										onMouseEnter={() => setActiveIndex(i)}
+										onClick={() => commit(opt.value)}
+										className={`flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm ${
+											isActive ? "bg-indigo-50" : ""
+										} ${isSelected ? "font-medium text-indigo-900" : "text-slate-700"}`}
+									>
+										<Flag code={opt.value} label={opt.label} />
+										<span className="truncate">{opt.label}</span>
+										{isSelected ? (
+											<svg
+												className="ml-auto h-4 w-4 text-indigo-600"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												aria-hidden="true"
+											>
+												<path
+													fillRule="evenodd"
+													d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.3 3.29 6.8-6.79a1 1 0 0 1 1.4 0Z"
+													clipRule="evenodd"
+												/>
+											</svg>
+										) : null}
+									</li>
+								);
+							})
+						)}
+					</ul>
+				</div>
+			) : null}
+		</div>
+	);
+}
+
 function TailwindSelect(props: RenderSelectProps) {
+	// The country selector is rendered with a fixed id by AddressInput; swap it
+	// for a fully custom flag dropdown instead of a native <select>.
+	if (props.id === "rav-country") {
+		return <CountrySelect {...props} />;
+	}
+
 	return (
 		<div className="relative">
 			<select
@@ -127,6 +361,23 @@ const tailwindRenderers = {
 	renderCheckbox: TailwindCheckbox,
 	renderContainer: TailwindContainer,
 } as const;
+
+/**
+ * Variant of the renderer set with a custom country-dropdown placeholder.
+ * AddressInput hardcodes the select placeholder, so we override it here on the
+ * way into the custom CountrySelect.
+ */
+function makeTailwindRenderers(countryPlaceholder: string) {
+	return {
+		...tailwindRenderers,
+		renderSelect: (props: RenderSelectProps) =>
+			props.id === "rav-country" ? (
+				<CountrySelect {...props} placeholderOverride={countryPlaceholder} />
+			) : (
+				<TailwindSelect {...props} />
+			),
+	} as const;
+}
 
 // ---------------------------------------------------------------------------
 // Account-type switch — two selectable cards (Individual / Business)
@@ -283,6 +534,7 @@ function BillingDemo() {
 					defaultCountry="DE"
 					onAddressChange={setAddressValue}
 					onConsumptionTaxChange={setTaxValue}
+					countryPlaceholder="Choose your country"
 					classNames={{ root: "flex flex-col gap-4" }}
 					{...tailwindRenderers}
 				/>
@@ -295,6 +547,11 @@ function BillingDemo() {
 /** AddressInput only, no country preselected. */
 function AddressFormDemo() {
 	const [value, setValue] = useState<AddressValue>(EMPTY_ADDRESS);
+	// Demonstrates a custom placeholder on the flag dropdown.
+	const renderers = useMemo(
+		() => makeTailwindRenderers("🌍 Where are we shipping?"),
+		[],
+	);
 	return (
 		<Shell
 			title="Shipping address"
@@ -304,7 +561,7 @@ function AddressFormDemo() {
 				value={value}
 				onChange={setValue}
 				classNames={{ root: "flex flex-col gap-4" }}
-				{...tailwindRenderers}
+				{...renderers}
 			/>
 			<StateDump state={value} />
 		</Shell>
@@ -330,6 +587,7 @@ function AddressTaxFormDemo() {
 					taxType={account}
 					onAddressChange={setAddressValue}
 					onConsumptionTaxChange={setTaxValue}
+					countryPlaceholder="Choose your country"
 					classNames={{ root: "flex flex-col gap-4" }}
 					{...tailwindRenderers}
 				/>
@@ -338,12 +596,11 @@ function AddressTaxFormDemo() {
 		</Shell>
 	);
 }
-
-export const Billing: Story = () => <BillingDemo />;
-Billing.storyName = "Billing form (Germany)";
-
 export const AddressForm: Story = () => <AddressFormDemo />;
-AddressForm.storyName = "Address form (no country)";
+AddressForm.storyName = "Address no country";
 
 export const AddressTaxForm: Story = () => <AddressTaxFormDemo />;
-AddressTaxForm.storyName = "Address+Tax form (no country)";
+AddressTaxForm.storyName = "Address tax no country";
+
+export const AddressTaxFormGermany: Story = () => <BillingDemo />;
+AddressTaxFormGermany.storyName = "Address tax with country";

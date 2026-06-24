@@ -1,31 +1,104 @@
 import {
 	type ChangeEvent,
+	type ChangeEventHandler,
 	Fragment,
+	type ReactNode,
 	useCallback,
 	useEffect,
 	useState,
 } from "react";
 import type {
 	AddressCollectionMode,
-	AddressInputProps,
-	AddressValue,
-	RenderContainerProps,
-	RenderInputProps,
-	RenderSelectProps,
-} from "../../types.js";
-import type {
 	AddressFieldKey,
+	AddressInputClassNames,
+	AddressValue,
 	CountryAddressConfig,
-} from "../../utils/address.js";
+} from "../../utils/address";
 import {
 	ALL_COUNTRY_OPTIONS,
 	getCountryConfig,
 	isEUCountry,
 	resolveAddressField,
-} from "../../utils/address.js";
-import { hasRegionalTax } from "../../utils/tax.js";
-import type { ValidationError } from "../../utils/validation.js";
-import { validateAddress } from "../../utils/validation.js";
+} from "../../utils/address";
+import { hasRegionalTax } from "../../utils/tax";
+import type { ValidationError } from "../../utils/validation";
+import { validateAddress } from "../../utils/validation";
+
+export interface RenderInputProps {
+	id: string;
+	value: string;
+	onChange: ChangeEventHandler<HTMLInputElement>;
+	onBlur?: () => void;
+	placeholder?: string;
+	disabled?: boolean;
+	required?: boolean;
+	"aria-invalid"?: boolean;
+	"aria-describedby"?: string;
+	className?: string;
+}
+
+export interface RenderSelectProps {
+	id: string;
+	value: string;
+	onChange: ChangeEventHandler<HTMLSelectElement>;
+	onBlur?: () => void;
+	disabled?: boolean;
+	required?: boolean;
+	"aria-invalid"?: boolean;
+	"aria-describedby"?: string;
+	className?: string;
+	options: ReadonlyArray<{ value: string; label: string }>;
+	/** Text shown in the disabled empty option. */
+	placeholder?: string;
+}
+
+export interface RenderCheckboxProps {
+	id?: string;
+	checked: boolean;
+	onChange: ChangeEventHandler<HTMLInputElement>;
+	disabled?: boolean;
+	label: string;
+	className?: string;
+}
+
+export interface RenderContainerProps {
+	/** Matches the input element's id, for use in label's htmlFor. */
+	id: string;
+	fieldKey: string;
+	label: string;
+	required?: boolean;
+	error?: string;
+	children: ReactNode;
+	className?: string;
+}
+
+export interface AddressInputProps {
+	value: AddressValue;
+	onChange: (value: AddressValue) => void;
+	onValidationChange?: (valid: boolean, errors: ValidationError[]) => void;
+	/** Controls which fields are shown. Defaults to "full". */
+	mode?: AddressCollectionMode;
+	/**
+	 * Whether the level-1 (state/province/region) field is required.
+	 * Defaults to false, in which case the field is omitted entirely — it is
+	 * never shown as optional. Set true to collect it as a required field,
+	 * e.g. where downstream logic needs it (AddressTaxInput requires it for
+	 * countries whose tax rate varies by region).
+	 */
+	requireLevel1?: boolean;
+	/** Pre-selects a country and moves the country selector to the bottom of the form. */
+	defaultCountry?: string;
+	/** Pre-selects a state/region. */
+	defaultRegion?: string;
+	/** Placeholder shown in the country selector's empty option. Defaults to "— Select a country —". */
+	countryPlaceholder?: string;
+	disabled?: boolean;
+	className?: string;
+	classNames?: Partial<AddressInputClassNames>;
+	renderInput?: (props: RenderInputProps) => ReactNode;
+	renderSelect?: (props: RenderSelectProps) => ReactNode;
+	renderContainer?: (props: RenderContainerProps) => ReactNode;
+}
 
 const EMPTY_VALUE: AddressValue = {
 	line1: "",
@@ -89,8 +162,8 @@ export function AddressInput({
 	classNames,
 	defaultCountry,
 	defaultRegion,
+	countryPlaceholder = "— Select a country —",
 	renderInput,
-	renderCheckbox: _renderCheckbox,
 	renderSelect,
 	renderContainer,
 }: AddressInputProps) {
@@ -247,7 +320,7 @@ export function AddressInput({
 				value: c.code,
 				label: c.name,
 			})),
-			placeholder: "— Select a country —",
+			placeholder: countryPlaceholder,
 		}),
 	});
 

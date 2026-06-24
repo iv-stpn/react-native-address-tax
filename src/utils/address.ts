@@ -1,22 +1,23 @@
-// Level-1 administrative division option lists, sourced from data/admin1.json
-// via codegen (scripts/gen-admin1-options.ts). Each is a separate named export
+// Level-1 administrative division option lists, sourced from data/level1-administrative-codes.json
+// via codegen (scripts/gen-level1-codes.ts). Each is a separate named export
 // so the bundler tree-shakes away every country we don't import below — the
 // full set of divisions never reaches the published build.
 
-import type { AdministrativeDivisionOption } from "../data/admin1";
-import {
-	admin1_AU,
-	admin1_CA,
-	admin1_ES,
-	admin1_GB,
-	admin1_IT,
-	admin1_JP,
-	admin1_US,
-} from "../data/admin1";
+import type { ChangeEventHandler, ReactNode } from "react";
 // Full country reference data (every country), generated from data/countries.json
 // by scripts/gen-countries.ts. Source of postal-code patterns and level-1
 // division labels below.
 import { COUNTRY_DATA } from "../data/countries";
+import type { AdministrativeDivisionOption } from "../data/level1-administrative-codes";
+import {
+	level1Admin_AU,
+	level1Admin_CA,
+	level1Admin_ES,
+	level1Admin_GB,
+	level1Admin_IT,
+	level1Admin_JP,
+	level1Admin_US,
+} from "../data/level1-administrative-codes";
 import { POSTAL_CODE_OVERRIDES } from "../data/postal-codes";
 
 // ISO 3166-1 alpha-2 codes for the countries the library currently supports:
@@ -82,9 +83,45 @@ export const SUPPORTED_COUNTRY_CODES = [
 	"AE",
 	"HK",
 	"MO",
+	"PH",
+	"IN",
 ] as const;
 
 export type SupportedCountryCode = (typeof SUPPORTED_COUNTRY_CODES)[number];
+
+export interface AddressValue {
+	line1: string;
+	line2?: string;
+	city: string;
+	level1?: string;
+	postalCode: string;
+	country: string;
+}
+
+/** Controls which address fields are collected. */
+export type AddressCollectionMode =
+	/** Country only; region also for countries with per-region tax rules (US, CA); full address for EU countries. */
+	| "minimal"
+	/** Country + region always; full address for EU countries. */
+	| "regionMinimal"
+	/** Country + region only, always. */
+	| "region"
+	/** Full address, always. */
+	| "full";
+
+// ---------------------------------------------------------------------------
+// Shared render-prop types (used by both AddressInput and AddressTaxInput).
+// ---------------------------------------------------------------------------
+
+export interface AddressInputClassNames {
+	root: string;
+	row: string;
+	field: string;
+	label: string;
+	input: string;
+	select: string;
+	error: string;
+}
 
 export type AddressFieldKey =
 	| "line1"
@@ -105,13 +142,46 @@ export interface CountryAddressConfig {
 	level1Options?: ReadonlyArray<AdministrativeDivisionOption>;
 }
 
-// Default field labels. Per-country overrides for the postal code and city
-// fields live in POSTAL_CODE_OVERRIDES; the level-1 label is derived from
-// COUNTRY_DATA. line1/line2 use these generic labels for every country.
-const LINE1_LABEL = "Street Address";
-const LINE2_LABEL = "Apartment, Suite, Unit, Building, Floor";
+// Default field labels and placeholders. Per-country overrides for the postal
+// code and city fields live in POSTAL_CODE_OVERRIDES; the level-1 label is
+// derived from COUNTRY_DATA. line1/line2 use the generic labels/placeholders
+// below for every country except those listed in LINE_OVERRIDES.
+const LINE1_LABEL_DEFAULT = "Address line 1";
+const LINE2_LABEL_DEFAULT = "Address line 2";
+const LINE1_PLACEHOLDER_DEFAULT = "Street address";
+const LINE2_PLACEHOLDER_DEFAULT =
+	"Apartment, unit number, building, floor, etc.";
 const POSTAL_CODE_LABEL_DEFAULT = "Postal code";
 const CITY_LABEL_DEFAULT = "City";
+
+// Per-country overrides for the line1/line2 label and placeholder text. The
+// label conveys what the field *is* (and often differs by locale convention);
+// the placeholder gives an example of what to type (and differs where local
+// addressing relies on landmarks, blocks, etc.). Any field left unset falls
+// back to the generic default above.
+interface LineOverrides {
+	line1Label?: string;
+	line2Label?: string;
+	line1Placeholder?: string;
+	line2Placeholder?: string;
+}
+
+const LINE_OVERRIDES: Partial<Record<string, LineOverrides>> = {
+	FR: { line1Label: "Address", line2Label: "Address details" },
+	// Countries where landmark-based addressing is common.
+	PH: {
+		line1Label: "Address",
+		line2Label: "Landmark/Unit details",
+		line1Placeholder: "Street, road, block and lot number",
+		line2Placeholder: "Near landmark or unit number, building, floor, etc.",
+	},
+	IN: {
+		line1Label: "Address",
+		line2Label: "Landmark/Unit details",
+		line1Placeholder: "Street, road, block and lot number",
+		line2Placeholder: "Near landmark or unit number, building, floor, etc.",
+	},
+};
 
 // Suffix appended to the label of optional fields in the rendered UI.
 const OPTIONAL_SUFFIX = " (optional)";
@@ -139,15 +209,15 @@ export interface ResolvedAddressField {
 export function addressFieldLabel(code: string, key: AddressFieldKey): string {
 	switch (key) {
 		case "line1":
-			return LINE1_LABEL;
+			return LINE_OVERRIDES[code]?.line1Label ?? LINE1_LABEL_DEFAULT;
 		case "line2":
-			return LINE2_LABEL;
+			return LINE_OVERRIDES[code]?.line2Label ?? LINE2_LABEL_DEFAULT;
 		case "city":
 			return POSTAL_CODE_OVERRIDES[code]?.cityLabel ?? CITY_LABEL_DEFAULT;
 		case "postalCode":
 			return POSTAL_CODE_OVERRIDES[code]?.label ?? POSTAL_CODE_LABEL_DEFAULT;
 		case "level1":
-			return COUNTRY_DATA[code]?.divisionTypes.admin1?.en ?? "Region";
+			return COUNTRY_DATA[code]?.administrativeLabels.level1?.en ?? "Region";
 		case "country":
 			return "Country";
 	}
@@ -179,6 +249,14 @@ export function resolveAddressField(
 		label: required ? baseLabel : `${baseLabel}${OPTIONAL_SUFFIX}`,
 		required,
 	};
+	if (key === "line1") {
+		field.placeholder =
+			LINE_OVERRIDES[code]?.line1Placeholder ?? LINE1_PLACEHOLDER_DEFAULT;
+	}
+	if (key === "line2") {
+		field.placeholder =
+			LINE_OVERRIDES[code]?.line2Placeholder ?? LINE2_PLACEHOLDER_DEFAULT;
+	}
 	if (key === "postalCode") {
 		const placeholder = POSTAL_CODE_OVERRIDES[code]?.placeholder;
 		if (placeholder) field.placeholder = placeholder;
@@ -212,13 +290,13 @@ function postalPattern(code: SupportedCountryCode): RegExp | undefined {
 const LEVEL1_OPTIONS: Partial<
 	Record<SupportedCountryCode, ReadonlyArray<AdministrativeDivisionOption>>
 > = {
-	ES: admin1_ES,
-	GB: admin1_GB,
-	IT: admin1_IT,
-	US: admin1_US,
-	CA: admin1_CA,
-	AU: admin1_AU,
-	JP: admin1_JP,
+	ES: level1Admin_ES,
+	GB: level1Admin_GB,
+	IT: level1Admin_IT,
+	US: level1Admin_US,
+	CA: level1Admin_CA,
+	AU: level1Admin_AU,
+	JP: level1Admin_JP,
 };
 
 // Curated field orders for countries whose layout differs from the standard
@@ -259,7 +337,7 @@ function buildConfig(code: SupportedCountryCode): CountryAddressConfig {
 }
 
 // Every supported country gets a concrete config. Field order is curated where
-// a bespoke layout is needed, otherwise generated from COUNTRY_DATA; the
+// a bespoke layout is needed, otherwise generated from COUNTRY_DATA"; the
 // postal-code pattern always comes from COUNTRY_DATA. Built as a typed Record
 // so callers never have to handle a missing config for a supported code.
 export const COUNTRIES_ADDRESSES = Object.fromEntries(

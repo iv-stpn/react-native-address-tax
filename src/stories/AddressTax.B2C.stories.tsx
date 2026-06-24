@@ -1,5 +1,5 @@
 import type { Story, StoryDefault } from "@ladle/react";
-import { AddressTaxWrapper } from "./_utils.js";
+import { AddressTaxWrapper } from "./_utils";
 
 export default {
 	title: "Address+Tax / Business to consumer",

@@ -1,7 +1,7 @@
 // Pulls reference geo data from GeoNames and parses it into three JSON files:
 //   data/countries.json -> list of countries (ISO alpha-2 + metadata)
-//   data/admin1.json    -> level-1 administrative divisions, keyed by country
-//   data/admin2.json    -> level-2 administrative divisions, keyed by country
+//   data/level1-administrative-codes.json    -> level-1 administrative divisions, keyed by country
+//   data/level2-administrative-codes.json    -> level-2 administrative divisions, keyed by country
 //
 // Each division is enriched with:
 //   localNames   -> { <lang>: name } for the country's languages (GeoNames alternateNames)
@@ -40,7 +40,7 @@ async function fetchTsv(file: string): Promise<string[][]> {
 
 // Per-level subdivision type: English category from ISO 3166-2 (iso-codes),
 // local name from the dominant Wikidata subdivision-type item. Either may be null.
-type DivisionType = { local: string | null; en: string | null };
+type DivisionLabel = { local: string | null; en: string | null };
 
 type Country = {
 	code: string;
@@ -51,17 +51,22 @@ type Country = {
 	currencyName: string;
 	postalCodeRegex: string | null;
 	languages: string[];
-	divisionTypes: { admin1: DivisionType | null; admin2: DivisionType | null };
+	administrativeLabels: {
+		level1: DivisionLabel | null;
+		level2: DivisionLabel | null;
+	};
 };
 
-type AdminDivision = {
+type AdministrativeDivision = {
 	code: string;
 	name: string;
 	localNames: Record<string, string>;
 	officialCode: string | null;
 };
 
-type Admin2Division = AdminDivision & { admin1Code: string };
+type Level2AdministrativeDivision = AdministrativeDivision & {
+	level1AdminCode: string;
+};
 
 // Reduce GeoNames' per-country language list (e.g. "de-CH,fr-CH,it-CH,rm") to a
 // deduped set of base ISO-639 codes ("de","fr","it","rm"). GeoNames does not
@@ -76,21 +81,25 @@ function baseLanguages(languages: string[]): string[] {
 	return [...seen];
 }
 
+const wait = async (time: number) => new Promise((_) => setTimeout(_, time));
+
+const sparqlHeaders = {
+	Accept: "text/tab-separated-values",
+	"User-Agent": USER_AGENT,
+};
+
 // Run a SPARQL query against WDQS, returning data rows (TSV, header dropped).
 // WDQS is flaky under load (502s / timeouts), so retry with backoff.
 async function sparql(query: string): Promise<string[][]> {
 	const url = `${WIKIDATA_SPARQL}?query=${encodeURIComponent(query)}`;
 	for (let attempt = 1; ; attempt++) {
 		try {
-			const res = await fetch(url, {
-				headers: {
-					Accept: "text/tab-separated-values",
-					"User-Agent": USER_AGENT,
-				},
-			});
+			const res = await fetch(url, { headers: sparqlHeaders });
 			const text = await res.text();
+
 			if (!res.ok || text.startsWith("<"))
 				throw new Error(`status ${res.status}`);
+
 			return text
 				.split("\n")
 				.slice(1)
@@ -101,8 +110,8 @@ async function sparql(query: string): Promise<string[][]> {
 						.map((v) => v.replace(/@[\w-]+$/, "").replace(/^"|"$/g, "")),
 				);
 		} catch (err) {
-			if (attempt >= 5) throw err;
-			await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+			if (attempt >= 3) throw err;
+			await wait(500 * 2 ** attempt);
 		}
 	}
 }
@@ -153,33 +162,40 @@ const TYPE_BLOCKLIST = [
 ];
 
 // Both admin-level labels (English + local) for a country, derived from the
-// Wikidata P150 (contains administrative territorial entity) chain. Admin1 uses
-// one hop (country → division), admin2 uses two hops (country → a1 → division).
+// Wikidata P150 (contains administrative territorial entity) chain. level1AdministrativeLabel uses
+// one hop (country → division), level2AdministrativeLabel uses two hops (country → a1 → division).
 // Per level we read every division's P31 type, clean the qualifier off each
 // label (so "county of Texas"/"county of California"/… → "County"), then GROUP
-// BY the cleaned English label. Admin2 groups are ranked by how many distinct
-// admin1 parents they span — the level signal: France's department spans 13
+// BY the cleaned English label.
+
+// level2AdministrativeLabel groups are ranked by how many distinct
+// level1AdministrativeLabel parents they span — the level signal: France's department spans 13
 // regions while its communes span only a handful, so department wins even though
-// communes are more numerous. Admin1 has no parent to count, so it ranks by
+// communes are more numerous. level1 has no parent to count, so it ranks by
 // frequency. This keeps the generic term (FR → "Department", not ISO 3166-2's
 // "Metropolitan department") without the sparse P1566-join problem.
-async function fetchDivisionTypes(
+async function fetchDivisionLabels(
 	cc: string,
 	lang: string,
 	names: string[],
-): Promise<{ admin1: DivisionType | null; admin2: DivisionType | null }> {
+): Promise<{
+	level1: DivisionLabel | null;
+	level2: DivisionLabel | null;
+}> {
 	const a1 = await sparql(`SELECT ?en ?loc (COUNT(*) AS ?w) WHERE {
 		?c wdt:P297 "${cc}" . ?c wdt:P150 ?div .
 		?div wdt:P31 ?type .
 		OPTIONAL { ?type rdfs:label ?en FILTER(LANG(?en)="en") }
 		OPTIONAL { ?type rdfs:label ?loc FILTER(LANG(?loc)="${lang}") }
 	} GROUP BY ?en ?loc ORDER BY DESC(?w) LIMIT 60`);
-	// admin2 selects two metrics: ?np = distinct admin1 parents (the level signal,
+
+	// level2 selects two metrics: ?np = distinct level1 parents (the level signal,
 	// ranked first client-side), ?n = raw count (tiebreak / local-label picker).
 	// Order by frequency, not ?np: split per-region types (US "county of Texas")
 	// each have ?np=1 but huge ?n, so frequency ordering keeps them in the window
 	// to be regrouped, whereas ?np ordering would drop them past the limit.
-	const a2 = await sparql(`SELECT ?en ?loc (COUNT(DISTINCT ?a1) AS ?np) (COUNT(*) AS ?n) WHERE {
+	const a2 =
+		await sparql(`SELECT ?en ?loc (COUNT(DISTINCT ?a1) AS ?np) (COUNT(*) AS ?n) WHERE {
 		?c wdt:P297 "${cc}" . ?c wdt:P150 ?a1 . ?a1 wdt:P150 ?div .
 		?div wdt:P31 ?type .
 		OPTIONAL { ?type rdfs:label ?en FILTER(LANG(?en)="en") }
@@ -189,9 +205,14 @@ async function fetchDivisionTypes(
 	// Group rows by cleaned English label, summing both metrics; carry the local
 	// label of the heaviest single row. Structural/statistical classifier labels
 	// are skipped so the next real category wins. `rankCol` is the row column to
-	// rank groups by (admin2 → coverage 1, admin1 → frequency 2).
-	const pick = (rows: string[][], rankCol: number): DivisionType | null => {
-		type G = { en: string | null; local: string | null; rank: number; top: number };
+	// rank groups by (level2 → coverage 1, level1 → frequency 2).
+	const pick = (rows: string[][], rankCol: number): DivisionLabel | null => {
+		type G = {
+			en: string | null;
+			local: string | null;
+			rank: number;
+			top: number;
+		};
 		const groups = new Map<string, G>();
 		for (const r of rows) {
 			const enRaw = (r[0] ?? "").toLowerCase();
@@ -215,7 +236,10 @@ async function fetchDivisionTypes(
 		if (!best) return null;
 		return best.en || best.local ? { en: best.en, local: best.local } : null;
 	};
-	return { admin1: pick(a1, 2), admin2: pick(a2, 1) };
+	return {
+		level1: pick(a1, 2),
+		level2: pick(a2, 1),
+	};
 }
 
 // A country's name in English and its primary language, used to strip country
@@ -342,69 +366,90 @@ const NAME_STOPWORDS = new Set([
 // Curated overrides for the local subdivision-type label where automatic
 // cleaning cannot reach the correct native form (e.g. Arabic/Persian broken
 // plurals that need singularizing, or irregular morphology). Keyed by country
-// code then admin level; each value replaces divisionTypes.<level>.{en,local}.
+// code then admin level; each value replaces administrativeLabels.<level>.{en,local}.
 // `local` is what automatic cleaning can't reach; `en` is for junk/plural ISO
 // categories the English normalizer can't fix on its own.
 type DivisionOverride = { en?: string; local?: string };
 const DIVISION_OVERRIDES: Record<
 	string,
-	{ admin1?: DivisionOverride; admin2?: DivisionOverride }
+	{
+		level1?: DivisionOverride;
+		level2?: DivisionOverride;
+	}
 > = {
-	AE: { admin1: { local: "إمارة" } }, // emirate (singular)
-	AF: { admin1: { local: "ولایت" } }, // province (Dari, singular)
-	DZ: { admin1: { local: "ولاية" } }, // strip nationality adjective "جزائرية"
-	EG: { admin1: { local: "محافظة" } }, // strip "مصرية"
-	JO: { admin1: { local: "محافظة" } }, // strip "أردنية"
-	YE: { admin1: { local: "محافظة" } }, // strip "يمنية"
-	IQ: { admin2: { local: "قضاء" } }, // strip "عراقي"
-	KM: { admin1: { local: "جزيرة" } }, // strip "بركانية" (volcanic)
-	ME: { admin1: { local: "Општина" } }, // strip "Црне Горе" (Cyrillic genitive)
-	MN: { admin1: { local: "Аймаг" } }, // province (singular)
-	OM: { admin1: { local: "محافظة" } }, // strip "مناطق و" / governorate
-	PK: { admin1: { local: "صوبہ" } }, // province (Urdu)
+	AE: { level1: { local: "إمارة" } }, // emirate (singular)
+	AF: { level1: { local: "ولایت" } }, // province (Dari, singular)
+	DZ: { level1: { local: "ولاية" } }, // strip nationality adjective "جزائرية"
+	EG: { level1: { local: "محافظة" } }, // strip "مصرية"
+	JO: { level1: { local: "محافظة" } }, // strip "أردنية"
+	YE: { level1: { local: "محافظة" } }, // strip "يمنية"
+	IQ: { level2: { local: "قضاء" } }, // strip "عراقي"
+	KM: { level1: { local: "جزيرة" } }, // strip "بركانية" (volcanic)
+	ME: { level1: { local: "Општина" } }, // strip "Црне Горе" (Cyrillic genitive)
+	MN: { level1: { local: "Аймаг" } }, // province (singular)
+	OM: { level1: { local: "محافظة" } }, // strip "مناطق و" / governorate
+	PK: { level1: { local: "صوبہ" } }, // province (Urdu)
 	RS: {
-		admin1: { local: "Округ" }, // district (strip "Србије")
-		admin2: { en: "Municipality / city", local: "Општина / град" },
+		level1: { local: "Округ" }, // district (strip "Србије")
+		level2: {
+			en: "Municipality / city",
+			local: "Општина / град",
+		},
 	},
 	// French overseas territories carry the nationality adjective "français" /
 	// the "(avant 2015)" note, which doesn't match their own country name.
-	GF: { admin1: { local: "Arrondissement" }, admin2: { local: "Canton" } },
-	RE: { admin1: { local: "Arrondissement" }, admin2: { local: "Canton" } },
-	GP: { admin1: { local: "Commune" }, admin2: { local: "Canton" } },
-	MQ: { admin1: { local: "Commune" }, admin2: { local: "Canton" } },
-	YT: { admin1: { local: "Canton" }, admin2: { local: "Commune" } },
-	// Wikidata returns the junk "Wikimedia list article" category for SA admin1.
-	SA: { admin1: { en: "Province", local: "منطقة" } },
+	GF: {
+		level1: { local: "Arrondissement" },
+		level2: { local: "Canton" },
+	},
+	RE: {
+		level1: { local: "Arrondissement" },
+		level2: { local: "Canton" },
+	},
+	GP: {
+		level1: { local: "Commune" },
+		level2: { local: "Canton" },
+	},
+	MQ: {
+		level1: { local: "Commune" },
+		level2: { local: "Canton" },
+	},
+	YT: {
+		level1: { local: "Canton" },
+		level2: { local: "Commune" },
+	},
+	// Wikidata returns the junk "Wikimedia list article" category for SA level-1 administrative code.
+	SA: { level1: { en: "Province", local: "منطقة" } },
 };
 
 // Exact plural/qualified `local` strings → their singular form. Non-Latin
 // morphology varies too much per script for rules, so this is a curated lookup
-// applied to every divisionTypes.local before DIVISION_OVERRIDES. Drops plural
+// applied to every administrativeLabels.local before DIVISION_OVERRIDES. Drops plural
 // suffixes (Persian/Dari های, Bengali সমূহ, Nepali हरू, Mongolian -д), Arabic
 // broken plurals (محافظات→محافظة, دوائر→دائرة), izafat endings (Tajik ҳои/и),
 // "of <country>" qualifiers, and nationality adjectives (مصري, يمنية).
 const LOCAL_SINGULAR: Record<string, string> = {
 	"ولسوالی های": "ولسوالی", // AF district (Dari)
-	"বিভাগসমূহ": "বিভাগ", // BD division
-	"Κοινότητες": "Κοινότητα", // CY community
-	"دوائر": "دائرة", // DZ district
+	বিভাগসমূহ: "বিভাগ", // BD division
+	Κοινότητες: "Κοινότητα", // CY community
+	دوائر: "دائرة", // DZ district
 	"مركز مصري": "مركز", // EG markaz (strip "Egyptian")
-	"מחוזות": "מחוז", // IL district
-	"محافظات": "محافظة", // IQ/KW governorate
-	"استانهای": "استان", // IR province
-	"شهرستانهای": "شهرستان", // IR county
-	"පළාත්": "පළාත", // LK province
+	מחוזות: "מחוז", // IL district
+	محافظات: "محافظة", // IQ/KW governorate
+	استانهای: "استان", // IR province
+	شهرستانهای: "شهرستان", // IR county
+	පළාත්: "පළාත", // LK province
 	"පරිපාලන දිස්ත්රික්ක": "පරිපාලන දිස්ත්රික්කය", // LK administrative district
-	"شعبيات": "شعبية", // LY district
-	"أقاليم": "إقليم", // MA province
+	شعبيات: "شعبية", // LY district
+	أقاليم: "إقليم", // MA province
 	"Улсын сумд": "Сум", // MN district (sum)
-	"प्रदेशहरू": "प्रदेश", // NP province
+	प्रदेशहरू: "प्रदेश", // NP province
 	"کے ڈویژن": "ڈویژن", // PK division (strip "کے")
 	"محافظات السلطة الوطنية الفلسطينية": "محافظة", // PS governorate
-	"بلديات": "بلدية", // QA municipality
-	"จังหวัดของประเทศไทย": "จังหวัด", // TH province (strip "of Thailand")
-	"Вилоятҳои": "Вилоят", // TJ region
-	"Ноҳияи": "Ноҳия", // TJ district
+	بلديات: "بلدية", // QA municipality
+	จังหวัดของประเทศไทย: "จังหวัด", // TH province (strip "of Thailand")
+	Вилоятҳои: "Вилоят", // TJ region
+	Ноҳияи: "Ноҳия", // TJ district
 	"مديرية يمنية": "مديرية", // YE district (strip "Yemeni")
 };
 
@@ -635,7 +680,7 @@ async function mapPool<T, R>(
 
 // APPEND_MAIN
 async function main() {
-	const [countryRows, admin1Rows, admin2Rows, officialCodes] =
+	const [countryRows, level1AdminRows, level2AdminCodeRows, officialCodes] =
 		await Promise.all([
 			fetchTsv("countryInfo.txt"),
 			fetchTsv("admin1CodesASCII.txt"),
@@ -659,7 +704,10 @@ async function main() {
 			currencyName: c[11] ?? "",
 			postalCodeRegex: c[14] ? c[14] : null,
 			languages: c[15] ? c[15].split(",") : [],
-			divisionTypes: { admin1: null, admin2: null },
+			administrativeLabels: {
+				level1: null,
+				level2: null,
+			},
 		}))
 		.filter((c) => c.code.length === 2)
 		.sort((a, b) => a.code.localeCompare(b.code));
@@ -671,16 +719,16 @@ async function main() {
 	// Parse admin files, keeping geonameId around long enough to join localized
 	// names; it is stripped before the JSON is written. Codes are country-prefixed
 	// (e.g. US-VA). officialCode comes from the Wikidata join on geonameId.
-	type Pending = AdminDivision & { geonameId: string };
-	type Pending2 = Admin2Division & { geonameId: string };
+	type Pending = AdministrativeDivision & { geonameId: string };
+	type Pending2 = Level2AdministrativeDivision & { geonameId: string };
 
 	// admin1CodesASCII.txt columns: "CC.A1" \t name \t asciiName \t geonameid
-	const admin1: Record<string, Pending[]> = {};
-	for (const [fullCode, name, , geonameId] of admin1Rows) {
+	const level1: Record<string, Pending[]> = {};
+	for (const [fullCode, name, , geonameId] of level1AdminRows) {
 		if (!fullCode || !geonameId) continue;
 		const [country, code] = fullCode.split(".");
 		if (!country || !code) continue;
-		(admin1[country] ??= []).push({
+		(level1[country] ??= []).push({
 			code: `${country}-${code}`,
 			name: name ?? "",
 			localNames: {},
@@ -690,13 +738,13 @@ async function main() {
 	}
 
 	// admin2Codes.txt columns: "CC.A1.A2" \t name \t asciiName \t geonameid
-	const admin2: Record<string, Pending2[]> = {};
-	for (const [fullCode, name, , geonameId] of admin2Rows) {
+	const level2: Record<string, Pending2[]> = {};
+	for (const [fullCode, name, , geonameId] of level2AdminCodeRows) {
 		if (!fullCode || !geonameId) continue;
-		const [country, admin1Code, code] = fullCode.split(".");
-		if (!country || !admin1Code || !code) continue;
-		(admin2[country] ??= []).push({
-			admin1Code: `${country}-${admin1Code}`,
+		const [country, level1AdminCode, code] = fullCode.split(".");
+		if (!country || !level1AdminCode || !code) continue;
+		(level2[country] ??= []).push({
+			level1AdminCode: `${country}-${level1AdminCode}`,
 			code: `${country}-${code}`,
 			name: name ?? "",
 			localNames: {},
@@ -707,15 +755,15 @@ async function main() {
 
 	// Fetch localized names per country (bounded concurrency) and fill them in.
 	const countryCodes = [
-		...new Set([...Object.keys(admin1), ...Object.keys(admin2)]),
+		...new Set([...Object.keys(level1), ...Object.keys(level2)]),
 	];
 	let done = 0;
 	await mapPool(countryCodes, 8, async (country) => {
 		const langs = new Set(langsByCountry.get(country) ?? []);
 		const localNames = await fetchLocalNames(country, langs);
-		for (const d of admin1[country] ?? [])
+		for (const d of level1[country] ?? [])
 			d.localNames = localNames.get(d.geonameId) ?? {};
-		for (const d of admin2[country] ?? [])
+		for (const d of level2[country] ?? [])
 			d.localNames = localNames.get(d.geonameId) ?? {};
 		done++;
 		if (done % 25 === 0 || done === countryCodes.length) {
@@ -724,7 +772,7 @@ async function main() {
 	});
 
 	// Division-type labels per country via Wikidata P150 chain: one hop for
-	// admin1, two hops for admin2. Yields the dominant type label in both English
+	// level1, two hops for level2. Yields the dominant type label in both English
 	// and the country's primary language without ISO 3166-2's over-specificity.
 	const countryByCode = new Map(countries.map((c) => [c.code, c]));
 	let dt = 0;
@@ -733,28 +781,28 @@ async function main() {
 		const lang = (langsByCountry.get(country) ?? [])[0] ?? "en";
 		if (c) {
 			const names = await fetchCountryName(country, lang);
-			const { admin1: a1, admin2: a2 } = await fetchDivisionTypes(
+			const { level1: a1, level2: a2 } = await fetchDivisionLabels(
 				country,
 				lang,
 				names,
 			);
-			c.divisionTypes.admin1 = a1;
-			c.divisionTypes.admin2 = a2;
+			c.administrativeLabels.level1 = a1;
+			c.administrativeLabels.level2 = a2;
 			// Singularize known plural/qualified local labels, then apply curated
 			// overrides for labels automatic cleaning can't reach.
-			for (const level of ["admin1", "admin2"] as const) {
-				const t = c.divisionTypes[level];
+			for (const level of ["level1", "level2"] as const) {
+				const t = c.administrativeLabels[level];
 				if (t?.local && LOCAL_SINGULAR[t.local])
 					t.local = LOCAL_SINGULAR[t.local]!;
 			}
 			const ov = DIVISION_OVERRIDES[country];
-			for (const level of ["admin1", "admin2"] as const) {
+			for (const level of ["level1", "level2"] as const) {
 				const o = ov?.[level];
 				if (!o) continue;
-				const cur = c.divisionTypes[level] ?? { en: null, local: null };
+				const cur = c.administrativeLabels[level] ?? { en: null, local: null };
 				if (o.en) cur.en = o.en;
 				if (o.local) cur.local = o.local;
-				c.divisionTypes[level] = cur;
+				c.administrativeLabels[level] = cur;
 			}
 		}
 		dt++;
@@ -763,18 +811,22 @@ async function main() {
 		}
 	});
 
-	const strip = <T extends AdminDivision & { geonameId: string }>(
+	const strip = <T extends AdministrativeDivision & { geonameId: string }>(
 		list: T[],
 	): Omit<T, "geonameId">[] =>
 		list
 			.map(({ geonameId: _omit, ...rest }) => rest)
 			.sort((a, b) => a.name.localeCompare(b.name));
-	const admin1Out: Record<string, AdminDivision[]> = {};
-	const admin2Out: Record<string, Admin2Division[]> = {};
-	for (const [country, list] of Object.entries(admin1))
-		admin1Out[country] = strip(list);
-	for (const [country, list] of Object.entries(admin2))
-		admin2Out[country] = strip(list);
+	const level1AdministrativeCodesOut: Record<string, AdministrativeDivision[]> =
+		{};
+	const level2AdministrativeCodesOut: Record<
+		string,
+		Level2AdministrativeDivision[]
+	> = {};
+	for (const [country, list] of Object.entries(level1))
+		level1AdministrativeCodesOut[country] = strip(list);
+	for (const [country, list] of Object.entries(level2))
+		level2AdministrativeCodesOut[country] = strip(list);
 
 	await mkdir(outDir, { recursive: true });
 	await Promise.all([
@@ -783,29 +835,27 @@ async function main() {
 			`${JSON.stringify(countries, null, "\t")}\n`,
 		),
 		writeFile(
-			resolve(outDir, "admin1.json"),
-			`${JSON.stringify(sortKeys(admin1Out), null, "\t")}\n`,
+			resolve(outDir, "level1-administrative-codes.json"),
+			`${JSON.stringify(sortKeys(level1AdministrativeCodesOut), null, "\t")}\n`,
 		),
 		writeFile(
-			resolve(outDir, "admin2.json"),
-			`${JSON.stringify(sortKeys(admin2Out), null, "\t")}\n`,
+			resolve(outDir, "level2-administrative-codes.json"),
+			`${JSON.stringify(sortKeys(level2AdministrativeCodesOut), null, "\t")}\n`,
 		),
 	]);
 
-	const admin1Total = Object.values(admin1Out).reduce(
-		(n, l) => n + l.length,
-		0,
-	);
-	const admin2Total = Object.values(admin2Out).reduce(
-		(n, l) => n + l.length,
-		0,
-	);
+	const level1AdminCodesTotal = Object.values(
+		level1AdministrativeCodesOut,
+	).reduce((n, l) => n + l.length, 0);
+	const level2AdminCodesTotal = Object.values(
+		level2AdministrativeCodesOut,
+	).reduce((n, l) => n + l.length, 0);
 	console.log(`countries.json: ${countries.length} countries`);
 	console.log(
-		`admin1.json:    ${admin1Total} divisions across ${Object.keys(admin1Out).length} countries`,
+		`level1-administrative-codes.json:    ${level1AdminCodesTotal} divisions across ${Object.keys(level1AdministrativeCodesOut).length} countries`,
 	);
 	console.log(
-		`admin2.json:    ${admin2Total} divisions across ${Object.keys(admin2Out).length} countries`,
+		`level2-administrative-codes.json:    ${level2AdminCodesTotal} divisions across ${Object.keys(level2AdministrativeCodesOut).length} countries`,
 	);
 }
 

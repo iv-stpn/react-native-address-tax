@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { AddressValue } from "../types.js";
+import type { AddressValue } from "../utils/address";
 import {
 	normalizeConsumptionTax,
 	validateAddress,
 	validateConsumptionTax,
 	validatePostalCode,
-} from "../utils/validation.js";
+} from "../utils/validation";
 
 describe("validateConsumptionTax", () => {
 	it("validates German VAT numbers", () => {
@@ -121,10 +121,8 @@ describe("validateAddress", () => {
 			false,
 		);
 		expect(
-			validateAddress(
-				{ ...deAddress, level1: "BE" },
-				{ requireLevel1: true },
-			).valid,
+			validateAddress({ ...deAddress, level1: "BE" }, { requireLevel1: true })
+				.valid,
 		).toBe(true);
 	});
 });

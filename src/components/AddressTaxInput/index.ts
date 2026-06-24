@@ -1,1 +1,4 @@
-export { AddressTaxInput } from "./AddressTaxInput.js";
+export {
+	AddressTaxInput,
+	type AddressTaxInputProps,
+} from "./AddressTaxInput";

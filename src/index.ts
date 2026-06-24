@@ -1,34 +1,31 @@
-export { AddressInput } from "./components/AddressInput/index.js";
-export { AddressTaxInput } from "./components/AddressTaxInput/index.js";
+export {
+	AddressInput,
+	type AddressInputProps,
+} from "./components/AddressInput/index";
+export {
+	AddressTaxInput,
+	type AddressTaxInputProps,
+} from "./components/AddressTaxInput/index";
 export type {
 	AddressCollectionMode,
-	AddressInputClassNames,
-	AddressInputProps,
-	AddressTaxInputProps,
-	AddressValue,
-	ConsumptionTaxValue,
-	RenderCheckboxProps,
-	RenderContainerProps,
-	RenderInputProps,
-	RenderSelectProps,
-	TaxType,
-} from "./types.js";
-export type {
 	AddressFieldKey,
+	AddressInputClassNames,
+	AddressValue,
 	CountryAddressConfig,
 	SupportedCountryCode as CountryCode,
-} from "./utils/address.js";
+} from "./utils/address";
 export {
 	COUNTRIES_ADDRESSES as COUNTRIES,
 	COUNTRY_LIST,
 	getConsumptionTaxLabel,
 	getCountryConfig,
 	SUPPORTED_COUNTRY_CODES as COUNTRY_CODES,
-} from "./utils/address.js";
-export type { ValidationError, ValidationResult } from "./utils/validation.js";
+} from "./utils/address";
+export type { ConsumptionTaxValue, TaxType } from "./utils/tax";
+export type { ValidationError, ValidationResult } from "./utils/validation";
 export {
 	normalizeConsumptionTax,
 	validateAddress,
 	validateConsumptionTax,
 	validatePostalCode,
-} from "./utils/validation.js";
+} from "./utils/validation";

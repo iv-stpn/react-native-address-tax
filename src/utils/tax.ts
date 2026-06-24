@@ -2,7 +2,26 @@
 // Types
 // ---------------------------------------------------------------------------
 
-import type { SupportedCountryCode } from "./address.js";
+import type { SupportedCountryCode } from "./address";
+
+export interface ConsumptionTaxValue {
+	consumptionTaxId?: string;
+	/** True when the business is presumed to hold a valid consumption tax identifier. */
+	hasIdentifier?: boolean;
+	/**
+	 * Consumption tax rate (%) that would apply if the seller had a nexus in the
+	 * resolved country/region — i.e. the headline rate for the buyer (accounting
+	 * for B2B reverse charge), ignoring whether the seller actually collects.
+	 */
+	baseTax?: number;
+	/**
+	 * Rate actually collectable: {@link baseTax} when the seller has a nexus in
+	 * the resolved country, 0 otherwise.
+	 */
+	effectiveTax?: number;
+}
+
+export type TaxType = "business" | "individual" | "either";
 
 /**
  * How a jurisdiction's consumption tax is collected:
@@ -110,7 +129,7 @@ function flat(
 
 /**
  * Build a region record for a country whose rate varies by state/province.
- * Country-level fields come from `base`; each region's `baseConsumerTax` comes
+ * Country-level fields come from `base`"; each region's `baseConsumerTax` comes
  * from `rates` (null = no tax in that region).
  */
 function regional(
@@ -359,6 +378,8 @@ export const TAX_CONFIG: Record<SupportedCountryCode, CountryTaxEntry> = {
 	AE: flat("VAT", 5, 375_000), // United Arab Emirates
 	HK: flat("No GST", null, null), // Hong Kong (no consumption tax)
 	MO: flat("No GST", null, null), // Macao (no consumption tax)
+	PH: flat("VAT", 12, 3_000_000), // Philippines
+	IN: flat("GST", 18, 4_000_000), // India (standard GST rate)
 };
 
 // ---------------------------------------------------------------------------

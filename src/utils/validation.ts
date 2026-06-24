@@ -1,11 +1,11 @@
-import { COUNTRY_DATA } from "../data/countries.js";
-import type { AddressValue } from "../types.js";
+import { COUNTRY_DATA } from "../data/countries";
+import type { AddressValue } from "./address";
 import {
 	addressFieldLabel,
 	getCountryConfig,
 	isAddressFieldRequired,
-} from "./address.js";
-import { getConsumptionTaxConfig } from "./tax.js";
+} from "./address";
+import { getConsumptionTaxConfig } from "./tax";
 
 export interface ValidationError {
 	field: string;

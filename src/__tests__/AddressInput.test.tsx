@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { AddressInput } from "../components/AddressInput/AddressInput.js";
-import type { AddressValue } from "../types.js";
+import { AddressInput } from "../components/AddressInput/AddressInput";
+import type { AddressValue } from "../utils/address";
 
 const baseValue: AddressValue = {
 	line1: "123 Main St",
@@ -22,7 +22,7 @@ describe("AddressInput", () => {
 		render(
 			<AddressInput value={baseValue} onChange={() => {}} requireLevel1 />,
 		);
-		expect(screen.getByLabelText(/street address/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/address line 1/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/city/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
@@ -31,9 +31,9 @@ describe("AddressInput", () => {
 	it("calls onChange when a field changes", async () => {
 		const onChange = vi.fn();
 		render(<AddressInput value={baseValue} onChange={onChange} />);
-		await userEvent.clear(screen.getByLabelText(/street address/i));
+		await userEvent.clear(screen.getByLabelText(/address line 1/i));
 		await userEvent.type(
-			screen.getByLabelText(/street address/i),
+			screen.getByLabelText(/address line 1/i),
 			"456 Elm St",
 		);
 		expect(onChange).toHaveBeenCalled();
@@ -43,7 +43,7 @@ describe("AddressInput", () => {
 		render(
 			<AddressInput value={{ ...baseValue, line1: "" }} onChange={() => {}} />,
 		);
-		const input = screen.getByLabelText(/street address/i);
+		const input = screen.getByLabelText(/address line 1/i);
 		fireEvent.blur(input);
 		expect(await screen.findByRole("alert")).toBeInTheDocument();
 	});
@@ -112,7 +112,7 @@ describe("AddressInput", () => {
 				requireLevel1
 			/>,
 		);
-		expect(screen.queryByLabelText(/street address/i)).not.toBeInTheDocument();
+		expect(screen.queryByLabelText(/address line 1/i)).not.toBeInTheDocument();
 		expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
 	});
 
@@ -124,7 +124,7 @@ describe("AddressInput", () => {
 				mode="minimal"
 			/>,
 		);
-		expect(screen.queryByLabelText(/street address/i)).not.toBeInTheDocument();
+		expect(screen.queryByLabelText(/address line 1/i)).not.toBeInTheDocument();
 		expect(screen.queryByLabelText(/prefecture/i)).not.toBeInTheDocument();
 	});
 
@@ -136,7 +136,7 @@ describe("AddressInput", () => {
 				mode="minimal"
 			/>,
 		);
-		expect(screen.getByLabelText(/street address/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/address line 1/i)).toBeInTheDocument();
 	});
 
 	it("uses defaultRegion to pre-fill state", () => {

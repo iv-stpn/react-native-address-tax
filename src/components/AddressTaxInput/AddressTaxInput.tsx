@@ -1,22 +1,69 @@
-import { type ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useState } from "react";
 import type {
-	AddressTaxInputProps,
+	AddressCollectionMode,
+	AddressInputClassNames,
 	AddressValue,
-	RenderCheckboxProps,
-	RenderContainerProps,
-	RenderInputProps,
-} from "../../types.js";
-import { getConsumptionTaxLabel } from "../../utils/address.js";
+} from "../../utils/address";
+import { getConsumptionTaxLabel } from "../../utils/address";
+import type { ConsumptionTaxValue, TaxType } from "../../utils/tax";
 import {
 	computeConsumptionTaxOutcome,
 	getConsumptionTaxConfig,
 	hasRegionalTax,
-} from "../../utils/tax.js";
+} from "../../utils/tax";
+import type { ValidationError } from "../../utils/validation";
 import {
 	normalizeConsumptionTax,
 	validateConsumptionTax,
-} from "../../utils/validation.js";
-import { AddressInput } from "../AddressInput/index.js";
+} from "../../utils/validation";
+import type {
+	RenderCheckboxProps,
+	RenderContainerProps,
+	RenderInputProps,
+	RenderSelectProps,
+} from "../AddressInput";
+import { AddressInput } from "../AddressInput/index";
+
+export interface AddressTaxInputProps {
+	addressValue: AddressValue;
+	taxValue?: ConsumptionTaxValue;
+	/**
+	 * Whether the payer is always a business, always an individual, or lets the user either.
+	 * - "business": treats as business with no toggle; shows tax identifier fields.
+	 * - "individual": treats as individual with no toggle; hides tax identifier fields.
+	 * - "either" (default): shows the Business account checkbox.
+	 */
+	taxType?: TaxType;
+	/** Controlled business state. Only meaningful when taxType is "either". When undefined, managed internally. */
+	isBusiness?: boolean;
+	/** Controlled "I have a tax identifier" state. When undefined, managed internally. */
+	hasTaxIdentifier?: boolean;
+	/**
+	 * Countries where you have a tax nexus and must collect consumption tax.
+	 * When provided, the tax identifier field is only shown for countries in this list.
+	 * When omitted, the tax identifier field is shown for all countries (when business).
+	 */
+	nexusList?: string[];
+	/** Whether the consumption tax identifier field is required. */
+	consumptionTaxRequired?: boolean;
+	onAddressChange: (value: AddressValue) => void;
+	onConsumptionTaxChange?: (value: ConsumptionTaxValue) => void;
+	onBusinessChange?: (isBusiness: boolean) => void;
+	onHasTaxIdentifierChange?: (hasTaxIdentifier: boolean) => void;
+	onValidationChange?: (valid: boolean, errors: ValidationError[]) => void;
+	mode?: AddressCollectionMode;
+	defaultCountry?: string;
+	defaultRegion?: string;
+	/** Placeholder shown in the country selector's empty option. Defaults to "— Select a country —". */
+	countryPlaceholder?: string;
+	disabled?: boolean;
+	className?: string;
+	classNames?: Partial<AddressInputClassNames>;
+	renderInput?: (props: RenderInputProps) => ReactNode;
+	renderCheckbox?: (props: RenderCheckboxProps) => ReactNode;
+	renderSelect?: (props: RenderSelectProps) => ReactNode;
+	renderContainer?: (props: RenderContainerProps) => ReactNode;
+}
 
 /**
  * Resolve the two tax-rate states for a given buyer/jurisdiction:
@@ -63,6 +110,7 @@ export function AddressTaxInput({
 	mode,
 	defaultCountry,
 	defaultRegion,
+	countryPlaceholder,
 	disabled = false,
 	className,
 	classNames,
@@ -346,6 +394,7 @@ export function AddressTaxInput({
 				requireLevel1={hasRegionalTax(country)}
 				defaultCountry={defaultCountry}
 				defaultRegion={defaultRegion}
+				countryPlaceholder={countryPlaceholder}
 				disabled={disabled}
 				classNames={classNames}
 				renderInput={renderInput}

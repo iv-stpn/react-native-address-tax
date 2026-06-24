@@ -1,12 +1,13 @@
 import { type CSSProperties, useState } from "react";
-import { AddressInput } from "../components/AddressInput/index.js";
-import { AddressTaxInput } from "../components/AddressTaxInput/index.js";
-import type { AddressValue, ConsumptionTaxValue, TaxType } from "../types.js";
+import { AddressInput } from "../components/AddressInput/index";
+import { AddressTaxInput } from "../components/AddressTaxInput/index";
+import type { AddressValue } from "../utils/address";
+import type { ConsumptionTaxValue, TaxType } from "../utils/tax";
 import {
 	type ConsumptionTaxOutcome,
 	computeConsumptionTaxOutcome,
 	type TaxOutcomeFlags,
-} from "../utils/tax.js";
+} from "../utils/tax";
 
 // ---------------------------------------------------------------------------
 // ConsumptionTaxPanel
