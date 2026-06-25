@@ -1,5 +1,13 @@
 # react-address-tax
 
+## 0.3.2
+
+### Patch Changes
+
+- [`6ab00cb`](https://github.com/iv-stpn/react-address-tax/commit/6ab00cb9239f837d41c471a9cfec2b513982c6ee) Thanks [@iv-stpn](https://github.com/iv-stpn)! - Add the `react-address-tax/utils` subpath export
+
+  Register `./utils` as a proper package entry point (ESM, CJS, and type declarations) so `import { isValidAddress } from "react-address-tax/utils"` resolves instead of failing with `Cannot find module 'react-address-tax/utils'` (ts2307). The entry exposes the library's component-free utility surface: address config/types, tax computation, and validation helpers.
+
 ## 0.3.1
 
 ### Patch Changes
