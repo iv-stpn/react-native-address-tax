@@ -172,7 +172,13 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
 
   const hasIdentifier = showTaxFields && hasTaxIdentifier;
 
-  const { baseTax, effectiveTax, consumptionTaxLabel, localConsumptionTaxLabel } = computeTaxRates(country, addressValue.level1, isBusiness, hasTaxIdentifier, isInNexus);
+  const { baseTax, effectiveTax, consumptionTaxLabel, localConsumptionTaxLabel } = computeTaxRates(
+    country,
+    addressValue.level1,
+    isBusiness,
+    hasTaxIdentifier,
+    isInNexus,
+  );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only — emit initial computed state; handlers cover subsequent changes
   useEffect(() => {
