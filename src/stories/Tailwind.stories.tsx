@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from "rea
 import { AddressInput } from "../components/AddressInput/index";
 import { AddressTaxInput } from "../components/AddressTaxInput/index";
 import type { AddressValue } from "../utils/address";
-import type { ConsumptionTaxValue } from "../utils/tax";
+import type { TaxValue } from "../utils/tax";
 
 import "./tailwind.css";
 
@@ -571,7 +571,7 @@ function Shell({ title, subtitle, children }: { title: string; subtitle: string;
 /** Full billing form: account-type cards + address + tax, prefilled country. */
 function BillingDemo() {
   const [addressValue, setAddressValue] = useState<AddressValue>(EMPTY_ADDRESS);
-  const [taxValue, setTaxValue] = useState<ConsumptionTaxValue>({});
+  const [taxValue, setTaxValue] = useState<TaxValue>({});
   const [account, setAccount] = useState<AccountType>("individual");
 
   return (
@@ -583,7 +583,7 @@ function BillingDemo() {
           taxType={account}
           defaultCountry="DE"
           onAddressChange={setAddressValue}
-          onConsumptionTaxChange={setTaxValue}
+          onTaxChange={setTaxValue}
           countryPlaceholder="Choose your country"
           className="flex flex-col gap-4"
           {...tailwindRenderers}
@@ -610,7 +610,7 @@ function AddressFormDemo() {
 /** AddressTaxInput with account-type cards, no country preselected. */
 function AddressTaxFormDemo() {
   const [addressValue, setAddressValue] = useState<AddressValue>(EMPTY_ADDRESS);
-  const [taxValue, setTaxValue] = useState<ConsumptionTaxValue>({});
+  const [taxValue, setTaxValue] = useState<TaxValue>({});
   const [account, setAccount] = useState<AccountType>("individual");
 
   return (
@@ -621,7 +621,7 @@ function AddressTaxFormDemo() {
           addressValue={addressValue}
           taxType={account}
           onAddressChange={setAddressValue}
-          onConsumptionTaxChange={setTaxValue}
+          onTaxChange={setTaxValue}
           countryPlaceholder="Choose your country"
           className="flex flex-col gap-4"
           {...tailwindRenderers}

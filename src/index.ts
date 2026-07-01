@@ -23,14 +23,14 @@ export {
   COUNTRY_LIST,
   getCountryConfig,
 } from "./utils/address";
-export type { ConsumptionTaxLabels, ConsumptionTaxValue, TaxType } from "./utils/tax";
-export { getBusinessTaxNumberLabel, getConsumptionTaxLabel, getLocalConsumptionTaxLabel } from "./utils/tax";
+export type { TaxLabels, TaxType, TaxValue } from "./utils/tax";
+export { getBusinessTaxNumberLabel, getLocalTaxLabel, getTaxLabel } from "./utils/tax";
 export type { ValidationError, ValidationResult } from "./utils/validation";
 export {
   computeEffectiveFields,
   isValidAddress,
-  normalizeConsumptionTax,
+  normalizeTax,
   validateAddress,
-  validateConsumptionTax,
   validatePostalCode,
+  validateTax,
 } from "./utils/validation";

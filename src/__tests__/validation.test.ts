@@ -3,44 +3,44 @@ import type { AddressValue } from "../utils/address";
 import {
   computeEffectiveFields,
   isValidAddress,
-  normalizeConsumptionTax,
+  normalizeTax,
   validateAddress,
-  validateConsumptionTax,
   validatePostalCode,
+  validateTax,
 } from "../utils/validation";
 
-describe("validateConsumptionTax", () => {
+describe("validateTax", () => {
   it("validates German VAT numbers", () => {
-    expect(validateConsumptionTax("DE123456789", "DE")).toBe(true);
-    expect(validateConsumptionTax("DE12345678", "DE")).toBe(false);
-    expect(validateConsumptionTax("123456789", "DE")).toBe(false);
+    expect(validateTax("DE123456789", "DE")).toBe(true);
+    expect(validateTax("DE12345678", "DE")).toBe(false);
+    expect(validateTax("123456789", "DE")).toBe(false);
   });
 
   it("validates French VAT numbers", () => {
-    expect(validateConsumptionTax("FRXX123456789", "FR")).toBe(true);
-    expect(validateConsumptionTax("FR12123456789", "FR")).toBe(true);
-    expect(validateConsumptionTax("FR123456789", "FR")).toBe(false);
+    expect(validateTax("FRXX123456789", "FR")).toBe(true);
+    expect(validateTax("FR12123456789", "FR")).toBe(true);
+    expect(validateTax("FR123456789", "FR")).toBe(false);
   });
 
   it("validates UK VAT numbers", () => {
-    expect(validateConsumptionTax("GB123456789", "GB")).toBe(true);
-    expect(validateConsumptionTax("GB123456789012", "GB")).toBe(true);
-    expect(validateConsumptionTax("GBGD123", "GB")).toBe(true);
-    expect(validateConsumptionTax("GB12345", "GB")).toBe(false);
+    expect(validateTax("GB123456789", "GB")).toBe(true);
+    expect(validateTax("GB123456789012", "GB")).toBe(true);
+    expect(validateTax("GBGD123", "GB")).toBe(true);
+    expect(validateTax("GB12345", "GB")).toBe(false);
   });
 
   it("validates Dutch VAT numbers", () => {
-    expect(validateConsumptionTax("NL123456789B01", "NL")).toBe(true);
-    expect(validateConsumptionTax("NL123456789B1", "NL")).toBe(false);
+    expect(validateTax("NL123456789B01", "NL")).toBe(true);
+    expect(validateTax("NL123456789B1", "NL")).toBe(false);
   });
 
   it("is case-insensitive and trims whitespace", () => {
-    expect(validateConsumptionTax("  de123456789  ", "DE")).toBe(true);
-    expect(validateConsumptionTax("de123456789", "DE")).toBe(true);
+    expect(validateTax("  de123456789  ", "DE")).toBe(true);
+    expect(validateTax("de123456789", "DE")).toBe(true);
   });
 
   it("returns false for unknown country", () => {
-    expect(validateConsumptionTax("XX123456789", "XX")).toBe(false);
+    expect(validateTax("XX123456789", "XX")).toBe(false);
   });
 });
 
@@ -216,12 +216,12 @@ describe("isValidAddress", () => {
   });
 });
 
-describe("normalizeConsumptionTax", () => {
+describe("normalizeTax", () => {
   it("uppercases and trims", () => {
-    expect(normalizeConsumptionTax("  de123  ")).toBe("DE123");
+    expect(normalizeTax("  de123  ")).toBe("DE123");
   });
 
   it("removes spaces", () => {
-    expect(normalizeConsumptionTax("DE 123 456 789")).toBe("DE123456789");
+    expect(normalizeTax("DE 123 456 789")).toBe("DE123456789");
   });
 });

@@ -1,15 +1,9 @@
 import { type ChangeEvent, forwardRef, type ReactNode, useEffect, useState } from "react";
 import type { AddressCollectionMode, AddressValue, ValidationMode } from "../../utils/address";
-import type { ConsumptionTaxValue, TaxType } from "../../utils/tax";
-import {
-  computeConsumptionTaxOutcome,
-  getBusinessTaxNumberLabel,
-  getConsumptionTaxConfig,
-  hasRegionalTax,
-  isEUCountry,
-} from "../../utils/tax";
+import type { TaxType, TaxValue } from "../../utils/tax";
+import { computeTaxOutcome, getBusinessTaxNumberLabel, getTaxConfig, hasRegionalTax, isEUCountry } from "../../utils/tax";
 import type { ValidationError } from "../../utils/validation";
-import { normalizeConsumptionTax, validateConsumptionTax } from "../../utils/validation";
+import { normalizeTax, validateTax } from "../../utils/validation";
 import type {
   AddressInputHandle,
   RenderCheckboxProps,
@@ -42,9 +36,9 @@ export interface AddressTaxInputProps {
    */
   nexusList?: string[];
   /** Whether the consumption tax identifier field is required. */
-  consumptionTaxRequired?: boolean;
+  taxRequired?: boolean;
   onAddressChange: (value: AddressValue) => void;
-  onConsumptionTaxChange?: (value: ConsumptionTaxValue) => void;
+  onTaxChange?: (value: TaxValue) => void;
   onBusinessChange?: (isBusiness: boolean) => void;
   onHasTaxIdentifierChange?: (hasTaxIdentifier: boolean) => void;
   onTaxIdentifierChange?: (taxIdentifier: string) => void;
@@ -82,7 +76,7 @@ export interface AddressTaxInputProps {
    * The `type` is "business" for the Business account checkbox, "country" or an
    * address field key (line1, line2, city, level1, postalCode) for address
    * fields, "noTaxIdentifier" for the "I don't have a tax id" checkbox, and
-   * "consumptionTaxId" for the tax identifier input.
+   * "taxId" for the tax identifier input.
    */
   renderFields?: (fields: RenderFieldEntry[]) => ReactNode;
 }
@@ -102,13 +96,13 @@ function computeTaxRates(
   isBusiness: boolean,
   hasTaxIdentifier: boolean,
   isInNexus: boolean,
-): { baseTax: number; effectiveTax: number; consumptionTaxLabel: string | null; localConsumptionTaxLabel: string | null } {
-  const outcome = computeConsumptionTaxOutcome(country, isBusiness, isBusiness && hasTaxIdentifier, isInNexus, level1);
+): { baseTax: number; effectiveTax: number; taxLabel: string | null; localTaxLabel: string | null } {
+  const outcome = computeTaxOutcome(country, isBusiness, isBusiness && hasTaxIdentifier, isInNexus, level1);
   return {
     baseTax: outcome.baseTax ?? 0,
     effectiveTax: outcome.effectiveTax ?? 0,
-    consumptionTaxLabel: outcome.consumptionTaxLabel,
-    localConsumptionTaxLabel: outcome.localConsumptionTaxLabel,
+    taxLabel: outcome.taxLabel,
+    localTaxLabel: outcome.localTaxLabel,
   };
 }
 
@@ -120,9 +114,9 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     hasTaxIdentifier: hasTaxIdentifierProp,
     taxIdentifier: taxIdentifierProp,
     nexusList,
-    consumptionTaxRequired = false,
+    taxRequired = false,
     onAddressChange,
-    onConsumptionTaxChange,
+    onTaxChange,
     onBusinessChange,
     onHasTaxIdentifierChange,
     onTaxIdentifierChange,
@@ -158,14 +152,14 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
           ? isBusinessProp
           : internalIsBusiness;
   const hasTaxIdentifier = hasTaxIdentifierProp !== undefined ? hasTaxIdentifierProp : internalHasTaxIdentifier;
-  const consumptionTaxId = taxIdentifierProp !== undefined ? taxIdentifierProp : internalTaxIdentifier;
-  const setConsumptionTaxId = (value: string) => {
+  const taxId = taxIdentifierProp !== undefined ? taxIdentifierProp : internalTaxIdentifier;
+  const setTaxId = (value: string) => {
     setInternalTaxIdentifier(value);
     onTaxIdentifierChange?.(value);
   };
 
   const country = addressValue.country || defaultCountry || "";
-  const taxConfig = getConsumptionTaxConfig(country);
+  const taxConfig = getTaxConfig(country);
   // EU member states always carry a consumption-tax obligation, so they count
   // as in-nexus even when the nexus list is empty or omits them.
   const isInNexus = !nexusList || nexusList.includes(country) || isEUCountry(country);
@@ -175,7 +169,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
 
   const hasIdentifier = showTaxFields && hasTaxIdentifier;
 
-  const { baseTax, effectiveTax, consumptionTaxLabel, localConsumptionTaxLabel } = computeTaxRates(
+  const { baseTax, effectiveTax, taxLabel, localTaxLabel } = computeTaxRates(
     country,
     addressValue.level1,
     isBusiness,
@@ -185,20 +179,18 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only — emit initial computed state; handlers cover subsequent changes
   useEffect(() => {
-    onConsumptionTaxChange?.({
-      consumptionTaxId: consumptionTaxId || undefined,
+    onTaxChange?.({
+      taxId: taxId || undefined,
       hasIdentifier,
       baseTax,
       effectiveTax,
-      consumptionTaxLabel,
-      localConsumptionTaxLabel,
+      taxLabel,
+      localTaxLabel,
     });
   }, []);
 
-  const consumptionTaxInvalid = taxTouched && !!consumptionTaxId ? !validateConsumptionTax(consumptionTaxId, country) : false;
-  const consumptionTaxError = consumptionTaxInvalid
-    ? `Invalid ${businessTaxNumberLabel} format. Expected: ${taxConfig?.consumptionTaxExample ?? ""}.`
-    : undefined;
+  const taxInvalid = taxTouched && !!taxId ? !validateTax(taxId, country) : false;
+  const taxError = taxInvalid ? `Invalid ${businessTaxNumberLabel} format. Expected: ${taxConfig?.taxExample ?? ""}.` : undefined;
 
   function handleBusinessChange(e: ChangeEvent<HTMLInputElement>) {
     const val = e.target.checked;
@@ -207,15 +199,15 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     if (!val) {
       setInternalHasTaxIdentifier(true);
       onHasTaxIdentifierChange?.(true);
-      onConsumptionTaxChange?.({
-        consumptionTaxId: consumptionTaxId || undefined,
+      onTaxChange?.({
+        taxId: taxId || undefined,
         hasIdentifier: false,
         ...computeTaxRates(country, addressValue.level1, false, hasTaxIdentifier, isInNexus),
       });
     } else {
       const newHasIdentifier = isInNexus && !!country && hasTaxIdentifier;
-      onConsumptionTaxChange?.({
-        consumptionTaxId: consumptionTaxId || undefined,
+      onTaxChange?.({
+        taxId: taxId || undefined,
         hasIdentifier: newHasIdentifier,
         ...computeTaxRates(country, addressValue.level1, true, hasTaxIdentifier, isInNexus),
       });
@@ -227,15 +219,15 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     setInternalHasTaxIdentifier(val);
     onHasTaxIdentifierChange?.(val);
     if (!val) {
-      setConsumptionTaxId("");
-      onConsumptionTaxChange?.({
-        consumptionTaxId: undefined,
+      setTaxId("");
+      onTaxChange?.({
+        taxId: undefined,
         hasIdentifier: false,
         ...computeTaxRates(country, addressValue.level1, isBusiness, false, isInNexus),
       });
     } else {
-      onConsumptionTaxChange?.({
-        consumptionTaxId: consumptionTaxId || undefined,
+      onTaxChange?.({
+        taxId: taxId || undefined,
         hasIdentifier: showTaxFields,
         ...computeTaxRates(country, addressValue.level1, isBusiness, true, isInNexus),
       });
@@ -249,38 +241,38 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     const newHasIdentifier = isBusiness && newInNexus && !!newCountry && hasTaxIdentifier;
     const rates = computeTaxRates(newCountry, newAddress.level1, isBusiness, hasTaxIdentifier, newInNexus);
     if (newHasIdentifier !== hasIdentifier || rates.baseTax !== baseTax || rates.effectiveTax !== effectiveTax) {
-      onConsumptionTaxChange?.({
-        consumptionTaxId: consumptionTaxId || undefined,
+      onTaxChange?.({
+        taxId: taxId || undefined,
         hasIdentifier: newHasIdentifier,
         ...rates,
       });
     }
   }
 
-  function handleConsumptionTaxChange(e: ChangeEvent<HTMLInputElement>) {
-    setConsumptionTaxId(e.target.value);
-    onConsumptionTaxChange?.({
-      consumptionTaxId: e.target.value || undefined,
+  function handleTaxChange(e: ChangeEvent<HTMLInputElement>) {
+    setTaxId(e.target.value);
+    onTaxChange?.({
+      taxId: e.target.value || undefined,
       hasIdentifier,
       baseTax,
       effectiveTax,
-      consumptionTaxLabel,
-      localConsumptionTaxLabel,
+      taxLabel,
+      localTaxLabel,
     });
     setTaxTouched(true);
   }
 
-  function handleConsumptionTaxBlur() {
-    const normalized = normalizeConsumptionTax(consumptionTaxId);
-    if (normalized !== consumptionTaxId) {
-      setConsumptionTaxId(normalized);
-      onConsumptionTaxChange?.({
-        consumptionTaxId: normalized || undefined,
+  function handleTaxBlur() {
+    const normalized = normalizeTax(taxId);
+    if (normalized !== taxId) {
+      setTaxId(normalized);
+      onTaxChange?.({
+        taxId: normalized || undefined,
         hasIdentifier,
         baseTax,
         effectiveTax,
-        consumptionTaxLabel,
-        localConsumptionTaxLabel,
+        taxLabel,
+        localTaxLabel,
       });
     }
     setTaxTouched(true);
@@ -346,7 +338,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     );
   }
 
-  const consumptionTaxInputId = "rav-consumptionTaxId";
+  const taxInputId = "rav-taxId";
 
   const businessCheckboxNode =
     taxType === "either" ? (
@@ -371,24 +363,24 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     </div>
   ) : null;
 
-  const consumptionTaxIdNode =
+  const taxIdNode =
     showTaxFields && hasTaxIdentifier
       ? renderContainerEl({
-          id: consumptionTaxInputId,
-          fieldKey: "consumptionTaxId",
+          id: taxInputId,
+          fieldKey: "taxId",
           label: businessTaxNumberLabel,
-          required: consumptionTaxRequired,
-          error: consumptionTaxError,
+          required: taxRequired,
+          error: taxError,
           children: renderInputEl({
-            id: consumptionTaxInputId,
-            value: consumptionTaxId,
-            onChange: handleConsumptionTaxChange,
-            onBlur: handleConsumptionTaxBlur,
-            placeholder: taxConfig?.consumptionTaxExample,
+            id: taxInputId,
+            value: taxId,
+            onChange: handleTaxChange,
+            onBlur: handleTaxBlur,
+            placeholder: taxConfig?.taxExample,
             disabled,
-            required: consumptionTaxRequired,
-            "aria-invalid": consumptionTaxInvalid,
-            "aria-describedby": consumptionTaxError ? `${consumptionTaxInputId}-error` : undefined,
+            required: taxRequired,
+            "aria-invalid": taxInvalid,
+            "aria-describedby": taxError ? `${taxInputId}-error` : undefined,
             className: "rav-input",
           }),
         })
@@ -398,7 +390,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
   const beforeEntries: RenderFieldEntry[] = businessCheckboxNode ? [{ type: "business", node: businessCheckboxNode }] : [];
   const afterEntries: RenderFieldEntry[] = [];
   if (noTaxIdentifierNode) afterEntries.push({ type: "noTaxIdentifier", node: noTaxIdentifierNode });
-  if (consumptionTaxIdNode) afterEntries.push({ type: "consumptionTaxId", node: consumptionTaxIdNode });
+  if (taxIdNode) afterEntries.push({ type: "taxId", node: taxIdNode });
 
   return (
     <div className={cn("rav-root", className)}>
@@ -429,7 +421,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
       {!renderFields && showTaxFields && (
         <>
           {noTaxIdentifierNode}
-          {consumptionTaxIdNode}
+          {taxIdNode}
         </>
       )}
     </div>

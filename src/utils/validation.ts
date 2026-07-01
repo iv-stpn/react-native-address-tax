@@ -1,7 +1,7 @@
 import { COUNTRY_DATA, type CountryCode } from "../data/countries";
 import type { AddressCollectionMode, AddressFieldKey, AddressValue, AddressValueInput } from "./address";
 import { addressFieldLabel, getCountryConfig, isAddressFieldRequired, isEUCountry } from "./address";
-import { getConsumptionTaxConfig, hasRegionalTax } from "./tax";
+import { getTaxConfig, hasRegionalTax } from "./tax";
 
 export interface ValidationError {
   field: string;
@@ -13,11 +13,11 @@ export interface ValidationResult {
   errors: ValidationError[];
 }
 
-export function validateConsumptionTax(consumptionTaxId: string, countryCode: string): boolean {
-  const config = getConsumptionTaxConfig(countryCode);
-  if (!config?.consumptionTaxPattern) return false;
-  const normalized = consumptionTaxId.trim().toUpperCase().replace(/\s/g, "");
-  return config.consumptionTaxPattern.test(normalized);
+export function validateTax(taxId: string, countryCode: string): boolean {
+  const config = getTaxConfig(countryCode);
+  if (!config?.taxPattern) return false;
+  const normalized = taxId.trim().toUpperCase().replace(/\s/g, "");
+  return config.taxPattern.test(normalized);
 }
 
 export function validatePostalCode(postalCode: string, countryCode: string): boolean {
@@ -139,6 +139,6 @@ export function isValidAddress(
   return validateAddress(full, mode).valid;
 }
 
-export function normalizeConsumptionTax(consumptionTaxId: string): string {
-  return consumptionTaxId.trim().toUpperCase().replace(/\s/g, "");
+export function normalizeTax(taxId: string): string {
+  return taxId.trim().toUpperCase().replace(/\s/g, "");
 }

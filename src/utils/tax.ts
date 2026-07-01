@@ -4,8 +4,8 @@
 
 import type { CountryCode } from "./address";
 
-export interface ConsumptionTaxValue {
-  consumptionTaxId?: string;
+export interface TaxValue {
+  taxId?: string;
   /** True when the business is presumed to hold a valid consumption tax identifier. */
   hasIdentifier?: boolean;
   /**
@@ -20,9 +20,9 @@ export interface ConsumptionTaxValue {
    */
   effectiveTax?: number;
   /** English name of the consumption tax (e.g. "VAT", "GST", "Sales Tax"), or null when the country has no consumption tax. */
-  consumptionTaxLabel?: string | null;
+  taxLabel?: string | null;
   /** Local name of the tax in the country's own language (e.g. "TVA", "MwSt", "消費税"), or null when the country has no consumption tax. */
-  localConsumptionTaxLabel?: string | null;
+  localTaxLabel?: string | null;
 }
 
 export type TaxType = "business" | "individual" | "either";
@@ -45,9 +45,9 @@ export interface TaxConfig {
   /** Local / municipal rates may stack on top of the headline rate (US sales tax). */
   localSurcharge?: boolean;
   /** Consumption tax identifier metadata (prefix/pattern/example) for supported countries. */
-  consumptionTaxPrefix?: string;
-  consumptionTaxPattern?: RegExp;
-  consumptionTaxExample?: string;
+  taxPrefix?: string;
+  taxPattern?: RegExp;
+  taxExample?: string;
 }
 
 /**
@@ -67,13 +67,13 @@ export interface TaxOutcomeFlags {
   localSurcharge: boolean;
 }
 
-export interface ConsumptionTaxOutcome {
+export interface TaxOutcome {
   /** Collection system of the resolved country, or null when no country applies. */
   taxSystem: TaxSystem | null;
   /** English name of the consumption tax (e.g. "VAT", "GST", "Sales Tax"), or null when the country has no consumption tax. */
-  consumptionTaxLabel: string | null;
+  taxLabel: string | null;
   /** Local name of the tax in the country's own language (e.g. "TVA", "MwSt", "消費税"), or null when the country has no consumption tax. */
-  localConsumptionTaxLabel: string | null;
+  localTaxLabel: string | null;
   /**
    * Consumption tax rate (%) that would apply if the seller had a nexus in the
    * resolved jurisdiction — the headline rate for this transaction, reverse-
@@ -139,39 +139,39 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
   // ---- EU member states (all 27, standard VAT rates as of 2025) -----------
   AT: {
     ...eu(20),
-    consumptionTaxPrefix: "ATU",
-    consumptionTaxPattern: /^ATU\d{8}$/,
-    consumptionTaxExample: "ATU12345678",
+    taxPrefix: "ATU",
+    taxPattern: /^ATU\d{8}$/,
+    taxExample: "ATU12345678",
   },
   BE: {
     ...eu(21),
-    consumptionTaxPrefix: "BE",
-    consumptionTaxPattern: /^BE0\d{9}$/,
-    consumptionTaxExample: "BE0123456789",
+    taxPrefix: "BE",
+    taxPattern: /^BE0\d{9}$/,
+    taxExample: "BE0123456789",
   },
   BG: eu(20),
   CY: eu(19),
   CZ: eu(21),
   DE: {
     ...eu(19),
-    consumptionTaxPrefix: "DE",
-    consumptionTaxPattern: /^DE\d{9}$/,
-    consumptionTaxExample: "DE123456789",
+    taxPrefix: "DE",
+    taxPattern: /^DE\d{9}$/,
+    taxExample: "DE123456789",
   },
   DK: eu(25),
   EE: eu(22),
   ES: {
     ...eu(21),
-    consumptionTaxPrefix: "ES",
-    consumptionTaxPattern: /^ES[A-Z0-9]\d{7}[A-Z0-9]$/,
-    consumptionTaxExample: "ESA12345678",
+    taxPrefix: "ES",
+    taxPattern: /^ES[A-Z0-9]\d{7}[A-Z0-9]$/,
+    taxExample: "ESA12345678",
   },
   FI: eu(25.5),
   FR: {
     ...eu(20),
-    consumptionTaxPrefix: "FR",
-    consumptionTaxPattern: /^FR[A-Z0-9]{2}\d{9}$/,
-    consumptionTaxExample: "FRXX123456789",
+    taxPrefix: "FR",
+    taxPattern: /^FR[A-Z0-9]{2}\d{9}$/,
+    taxExample: "FRXX123456789",
   },
   GR: eu(24),
   HR: eu(25),
@@ -179,9 +179,9 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
   IE: eu(23),
   IT: {
     ...eu(22),
-    consumptionTaxPrefix: "IT",
-    consumptionTaxPattern: /^IT\d{11}$/,
-    consumptionTaxExample: "IT12345678901",
+    taxPrefix: "IT",
+    taxPattern: /^IT\d{11}$/,
+    taxExample: "IT12345678901",
   },
   LT: eu(21),
   LU: eu(17),
@@ -189,15 +189,15 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
   MT: eu(18),
   NL: {
     ...eu(21),
-    consumptionTaxPrefix: "NL",
-    consumptionTaxPattern: /^NL\d{9}B\d{2}$/,
-    consumptionTaxExample: "NL123456789B01",
+    taxPrefix: "NL",
+    taxPattern: /^NL\d{9}B\d{2}$/,
+    taxExample: "NL123456789B01",
   },
   PL: {
     ...eu(23),
-    consumptionTaxPrefix: "PL",
-    consumptionTaxPattern: /^PL\d{10}$/,
-    consumptionTaxExample: "PL1234567890",
+    taxPrefix: "PL",
+    taxPattern: /^PL\d{10}$/,
+    taxExample: "PL1234567890",
   },
   PT: eu(23),
   RO: eu(19),
@@ -213,18 +213,18 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
     taxSystem: "country-specific",
     collectionThreshold: null,
     zeroRatedExport: true,
-    consumptionTaxPrefix: "GB",
-    consumptionTaxPattern: /^GB(\d{9}|\d{12}|(GD|HA)\d{3})$/,
-    consumptionTaxExample: "GB123456789",
+    taxPrefix: "GB",
+    taxPattern: /^GB(\d{9}|\d{12}|(GD|HA)\d{3})$/,
+    taxExample: "GB123456789",
   },
 
   // ---- Switzerland ----------------------------------------------------------
   // Outside EU VAT area. Swiss MWST/TVA/IVA may apply on buyer's side.
   CH: {
     ...flat(8.1, 100_000),
-    consumptionTaxPrefix: "CHE",
-    consumptionTaxPattern: /^CHE-\d{3}\.\d{3}\.\d{3}(MWST|TVA|IVA)?$/,
-    consumptionTaxExample: "CHE-123.456.789MWST",
+    taxPrefix: "CHE",
+    taxPattern: /^CHE-\d{3}\.\d{3}\.\d{3}(MWST|TVA|IVA)?$/,
+    taxExample: "CHE-123.456.789MWST",
   },
 
   // ---- United States --------------------------------------------------------
@@ -234,9 +234,9 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
       taxSystem: "country-specific",
       collectionThreshold: null,
       localSurcharge: true,
-      consumptionTaxPrefix: "",
-      consumptionTaxPattern: /^\d{2}-\d{7}$/,
-      consumptionTaxExample: "12-3456789",
+      taxPrefix: "",
+      taxPattern: /^\d{2}-\d{7}$/,
+      taxExample: "12-3456789",
     },
     {
       AL: 4,
@@ -299,9 +299,9 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
     {
       taxSystem: "country-specific",
       collectionThreshold: 30_000,
-      consumptionTaxPrefix: "",
-      consumptionTaxPattern: /^\d{9}RT\d{4}$/,
-      consumptionTaxExample: "123456789RT0001",
+      taxPrefix: "",
+      taxPattern: /^\d{9}RT\d{4}$/,
+      taxExample: "123456789RT0001",
     },
     {
       AB: 5, // GST only
@@ -323,17 +323,17 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
   // ---- Australia ------------------------------------------------------------
   AU: {
     ...flat(10, 75_000),
-    consumptionTaxPrefix: "",
-    consumptionTaxPattern: /^\d{11}$/,
-    consumptionTaxExample: "12345678901",
+    taxPrefix: "",
+    taxPattern: /^\d{11}$/,
+    taxExample: "12345678901",
   },
 
   // ---- Japan ----------------------------------------------------------------
   JP: {
     ...flat(10, 10_000_000),
-    consumptionTaxPrefix: "T",
-    consumptionTaxPattern: /^T\d{13}$/,
-    consumptionTaxExample: "T1234567890123",
+    taxPrefix: "T",
+    taxPattern: /^T\d{13}$/,
+    taxExample: "T1234567890123",
   },
 
   // ---- Other European countries (non-EU) ------------------------------------
@@ -575,16 +575,16 @@ export const TAX_CONFIG: Record<CountryCode, CountryTaxEntry> = {
 // Tax labels
 // ---------------------------------------------------------------------------
 
-export interface ConsumptionTaxLabels {
+export interface TaxLabels {
   /** English name of the tax (e.g. "VAT", "GST", "Sales Tax"). */
   en: string;
   /** Local name of the tax as used in that jurisdiction (e.g. "TVA", "MwSt", "消費税"). */
   local: string;
 }
 
-type CountryConsumptionTaxEntry = ConsumptionTaxLabels & {
+type CountryLabelEntry = TaxLabels & {
   /** Per-region label overrides (used when the tax name differs by province/state). */
-  byRegion?: Record<string, ConsumptionTaxLabels>;
+  byRegion?: Record<string, TaxLabels>;
 };
 
 /**
@@ -593,7 +593,7 @@ type CountryConsumptionTaxEntry = ConsumptionTaxLabels & {
  * Canada has per-province byRegion entries because the tax name varies
  * (GST, HST, GST+PST, GST+QST).
  */
-const CONSUMPTION_TAX_LABELS: Partial<Record<CountryCode, CountryConsumptionTaxEntry>> = {
+const TAX_LABELS: Partial<Record<CountryCode, CountryLabelEntry>> = {
   // ---- EU member states -------------------------------------------------------
   AT: { en: "VAT", local: "MwSt" },
   BE: { en: "VAT", local: "BTW/TVA" },
@@ -821,8 +821,8 @@ const CONSUMPTION_TAX_LABELS: Partial<Record<CountryCode, CountryConsumptionTaxE
 };
 
 /** English name of the consumption tax for a country (and optional region). Returns null for countries with no consumption tax. */
-export function getConsumptionTaxLabel(countryCode: string, region?: string): string | null {
-  const entry = CONSUMPTION_TAX_LABELS[countryCode.toUpperCase() as CountryCode];
+export function getTaxLabel(countryCode: string, region?: string): string | null {
+  const entry = TAX_LABELS[countryCode.toUpperCase() as CountryCode];
   if (!entry) return null;
   if (region) {
     const regionEntry = entry.byRegion?.[region.toUpperCase()];
@@ -832,8 +832,8 @@ export function getConsumptionTaxLabel(countryCode: string, region?: string): st
 }
 
 /** Local name of the consumption tax for a country (and optional region). Returns null for countries with no consumption tax. */
-export function getLocalConsumptionTaxLabel(countryCode: string, region?: string): string | null {
-  const entry = CONSUMPTION_TAX_LABELS[countryCode.toUpperCase() as CountryCode];
+export function getLocalTaxLabel(countryCode: string, region?: string): string | null {
+  const entry = TAX_LABELS[countryCode.toUpperCase() as CountryCode];
   if (!entry) return null;
   if (region) {
     const regionEntry = entry.byRegion?.[region.toUpperCase()];
@@ -868,7 +868,7 @@ export function getBusinessTaxNumberLabel(countryCode: string): string | null {
   const code = countryCode.toUpperCase() as CountryCode;
   if (BUSINESS_TAX_NUMBER_LABELS[code] !== undefined) return BUSINESS_TAX_NUMBER_LABELS[code]!;
   // Countries with no consumption tax have no registration number
-  if (!CONSUMPTION_TAX_LABELS[code]) return null;
+  if (!TAX_LABELS[code]) return null;
   return "VAT Number";
 }
 
@@ -893,7 +893,7 @@ export function hasRegionalTax(country: string): boolean {
  * in-nexus regardless of the supplied nexus list.
  */
 export function isEUCountry(country: string): boolean {
-  const config = getConsumptionTaxConfig(country);
+  const config = getTaxConfig(country);
   return !!config && config.taxSystem === "oss";
 }
 
@@ -902,7 +902,7 @@ export function isEUCountry(country: string): boolean {
  * consumption-tax identifier metadata (prefix/pattern/example). For regional
  * countries these fields are identical across regions, so any entry serves.
  */
-export function getConsumptionTaxConfig(country: string): TaxConfig | undefined {
+export function getTaxConfig(country: string): TaxConfig | undefined {
   const entry = TAX_CONFIG[country.toUpperCase() as CountryCode];
   if (!entry) return undefined;
   return isRegional(entry) ? Object.values(entry)[0] : entry;
@@ -941,10 +941,10 @@ function makeFlags(partial: Partial<TaxOutcomeFlags>): TaxOutcomeFlags {
   return { ...NO_FLAGS, ...partial };
 }
 
-const EMPTY_OUTCOME: ConsumptionTaxOutcome = {
+const EMPTY_OUTCOME: TaxOutcome = {
   taxSystem: null,
-  consumptionTaxLabel: null,
-  localConsumptionTaxLabel: null,
+  taxLabel: null,
+  localTaxLabel: null,
   baseTax: null,
   effectiveTax: 0,
   flags: NO_FLAGS,
@@ -954,13 +954,13 @@ const EMPTY_OUTCOME: ConsumptionTaxOutcome = {
 // Public API
 // ---------------------------------------------------------------------------
 
-export function computeConsumptionTaxOutcome(
+export function computeTaxOutcome(
   country: string,
   isBusiness: boolean,
-  hasConsumptionTaxId: boolean,
+  hasTaxId: boolean,
   hasNexus: boolean,
   state?: string,
-): ConsumptionTaxOutcome {
+): TaxOutcome {
   if (!country) return EMPTY_OUTCOME;
 
   const entry = TAX_CONFIG[country.toUpperCase() as CountryCode];
@@ -972,8 +972,8 @@ export function computeConsumptionTaxOutcome(
 
   const base = {
     taxSystem: config.taxSystem,
-    consumptionTaxLabel: getConsumptionTaxLabel(country, resolvedState),
-    localConsumptionTaxLabel: getLocalConsumptionTaxLabel(country, resolvedState),
+    taxLabel: getTaxLabel(country, resolvedState),
+    localTaxLabel: getLocalTaxLabel(country, resolvedState),
   } as const;
 
   // `effectiveTax` is `baseTax` when the seller has nexus, else 0
@@ -1007,7 +1007,7 @@ export function computeConsumptionTaxOutcome(
 
   // Business transactions
   // OSS countries: B2B with valid tax ID → reverse charge (0%)
-  if (config.taxSystem === "oss" && hasConsumptionTaxId) {
+  if (config.taxSystem === "oss" && hasTaxId) {
     const baseTax = 0;
     return {
       ...base,
@@ -1043,13 +1043,13 @@ export function computeConsumptionTaxOutcome(
 
 /**
  * Compute consumption tax outcome for consumer (B2C) transactions.
- * Convenience wrapper around {@link computeConsumptionTaxOutcome} with `isBusiness: false`.
+ * Convenience wrapper around {@link computeTaxOutcome} with `isBusiness: false`.
  *
  * @param country - Two-letter country code (ISO 3166-1 alpha-2)
  * @param hasNexus - Whether the seller has a tax nexus in the country
  * @param state - Optional state/province code for regional tax countries (US, CA)
  * @returns The computed tax outcome for a consumer transaction
  */
-export function computeConsumerConsumptionTaxOutcome(country: string, hasNexus: boolean, state?: string): ConsumptionTaxOutcome {
-  return computeConsumptionTaxOutcome(country, false, false, hasNexus, state);
+export function computeConsumerTaxOutcome(country: string, hasNexus: boolean, state?: string): TaxOutcome {
+  return computeTaxOutcome(country, false, false, hasNexus, state);
 }

@@ -25,30 +25,30 @@ export {
   resolveAddressField,
 } from "./utils/address";
 export type {
-  ConsumptionTaxLabels,
-  ConsumptionTaxOutcome,
-  ConsumptionTaxValue,
   CountryTaxEntry,
   TaxConfig,
+  TaxLabels,
+  TaxOutcome,
   TaxOutcomeFlags,
   TaxSystem,
   TaxType,
+  TaxValue,
 } from "./utils/tax";
 export {
-  computeConsumerConsumptionTaxOutcome,
-  computeConsumptionTaxOutcome,
+  computeConsumerTaxOutcome,
+  computeTaxOutcome,
   getBusinessTaxNumberLabel,
-  getConsumptionTaxConfig,
-  getConsumptionTaxLabel,
-  getLocalConsumptionTaxLabel,
+  getLocalTaxLabel,
+  getTaxConfig,
+  getTaxLabel,
   hasRegionalTax,
 } from "./utils/tax";
 export type { ValidationError, ValidationResult } from "./utils/validation";
 export {
   computeEffectiveFields,
   isValidAddress,
-  normalizeConsumptionTax,
+  normalizeTax,
   validateAddress,
-  validateConsumptionTax,
   validatePostalCode,
+  validateTax,
 } from "./utils/validation";

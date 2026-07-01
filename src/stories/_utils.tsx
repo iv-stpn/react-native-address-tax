@@ -2,17 +2,12 @@ import { type CSSProperties, useRef, useState } from "react";
 import { AddressInput, type AddressInputHandle } from "../components/AddressInput/index";
 import { AddressTaxInput } from "../components/AddressTaxInput/index";
 import type { AddressCollectionMode, AddressValue, ValidationMode } from "../utils/address";
-import type { ConsumptionTaxValue, TaxType } from "../utils/tax";
-import {
-  type ConsumptionTaxOutcome,
-  computeConsumptionTaxOutcome,
-  getConsumptionTaxConfig,
-  type TaxOutcomeFlags,
-} from "../utils/tax";
+import type { TaxType, TaxValue } from "../utils/tax";
+import { computeTaxOutcome, getTaxConfig, type TaxOutcome, type TaxOutcomeFlags } from "../utils/tax";
 import type { ValidationError } from "../utils/validation";
 
 // ---------------------------------------------------------------------------
-// ConsumptionTaxPanel
+// TaxPanel
 // ---------------------------------------------------------------------------
 
 /** Display-only categorization derived from the outcome flags. */
@@ -26,7 +21,7 @@ type TaxCategory =
   | "no-nexus"
   | "none";
 
-function categorize(o: ConsumptionTaxOutcome): TaxCategory {
+function categorize(o: TaxOutcome): TaxCategory {
   if (o.taxSystem === null) return "none";
   if (o.taxSystem === "oss") return o.flags.buyerSelfAccounts ? "reverse-charge" : "standard";
   if (o.flags.buyerSelfAccounts) return "zero-rated";
@@ -97,16 +92,16 @@ function formatRate(rate: number | null): string {
   return `${rate}%`;
 }
 
-function formatTaxLabel(o: ConsumptionTaxOutcome): string | null {
-  const { consumptionTaxLabel: en, localConsumptionTaxLabel: local } = o;
+function formatTaxLabel(o: TaxOutcome): string | null {
+  const { taxLabel: en, localTaxLabel: local } = o;
   if (!en && !local) return null;
   if (!en) return local;
   if (!local || en === local) return en;
   return `${en} / ${local}`;
 }
 
-function buildHeadline(category: TaxCategory, o: ConsumptionTaxOutcome, state?: string): string {
-  const { consumptionTaxLabel: taxName, effectiveTax: rate } = o;
+function buildHeadline(category: TaxCategory, o: TaxOutcome, state?: string): string {
+  const { taxLabel: taxName, effectiveTax: rate } = o;
   switch (category) {
     case "none":
       return "No country selected";
@@ -133,13 +128,13 @@ function buildHeadline(category: TaxCategory, o: ConsumptionTaxOutcome, state?: 
   }
 }
 
-function ConsumptionTaxPanel({
+function TaxPanel({
   outcome,
   country,
   state,
   noNexus = false,
 }: {
-  outcome: ConsumptionTaxOutcome;
+  outcome: TaxOutcome;
   country: string;
   state?: string;
   noNexus?: boolean;
@@ -148,7 +143,7 @@ function ConsumptionTaxPanel({
   const c = COLORS[category];
 
   // Resolve collectionThreshold from config for display
-  const config = country ? getConsumptionTaxConfig(country) : undefined;
+  const config = country ? getTaxConfig(country) : undefined;
   const collectionThreshold = config?.collectionThreshold ?? null;
 
   return (
@@ -446,30 +441,24 @@ export function AddressTaxWrapper({ defaultCountry, taxType }: AddressTaxWrapper
     postalCode: "",
     country: defaultCountry ?? "",
   });
-  const [taxValue, setTaxValue] = useState<ConsumptionTaxValue>({});
+  const [taxValue, setTaxValue] = useState<TaxValue>({});
   const [isBusiness, setIsBusiness] = useState(false);
   const [hasNexus, setHasNexus] = useState(true);
   const [mode, setMode] = useState<AddressCollectionMode>("full");
   const [validationMode, setValidationMode] = useState<ValidationMode>("onType");
-  const [consumptionTaxRequired, setConsumptionTaxRequired] = useState(false);
+  const [taxRequired, setTaxRequired] = useState(false);
   const [disabled, setDisabled] = useState(false);
   const [validity, setValidity] = useState<{ valid: boolean; errors: ValidationError[] }>({ valid: true, errors: [] });
   const inputRef = useRef<AddressInputHandle>(null);
 
   const effectiveIsBusiness = taxType === "business" ? true : taxType === "individual" ? false : isBusiness;
-  const hasConsumptionTaxId = taxValue.hasIdentifier ?? true;
+  const hasTaxId = taxValue.hasIdentifier ?? true;
 
   const nexusList = hasNexus ? undefined : [];
 
   const hasCountry = !!(addressValue.country || defaultCountry);
   const noNexus = !hasNexus && hasCountry;
-  const outcome = computeConsumptionTaxOutcome(
-    addressValue.country,
-    effectiveIsBusiness,
-    hasConsumptionTaxId,
-    hasNexus,
-    addressValue.level1,
-  );
+  const outcome = computeTaxOutcome(addressValue.country, effectiveIsBusiness, hasTaxId, hasNexus, addressValue.level1);
 
   return (
     <div style={containerStyle}>
@@ -478,7 +467,7 @@ export function AddressTaxWrapper({ defaultCountry, taxType }: AddressTaxWrapper
         <RadioGroup legend="validationMode" value={validationMode} options={VALIDATION_MODES} onChange={setValidationMode} />
         <div style={controlGroupStyle}>
           <span style={controlLegendStyle}>flags</span>
-          <Toggle label="consumptionTaxRequired" checked={consumptionTaxRequired} onChange={setConsumptionTaxRequired} />
+          <Toggle label="taxRequired" checked={taxRequired} onChange={setTaxRequired} />
           <Toggle label="has nexus in country" checked={hasNexus} onChange={setHasNexus} />
           <Toggle label="disabled" checked={disabled} onChange={setDisabled} />
           {validationMode === "onSubmit" && (
@@ -496,17 +485,17 @@ export function AddressTaxWrapper({ defaultCountry, taxType }: AddressTaxWrapper
         nexusList={nexusList}
         mode={mode}
         validationMode={validationMode}
-        consumptionTaxRequired={consumptionTaxRequired}
+        taxRequired={taxRequired}
         disabled={disabled}
         defaultCountry={defaultCountry}
         onAddressChange={setAddressValue}
-        onConsumptionTaxChange={setTaxValue}
+        onTaxChange={setTaxValue}
         onBusinessChange={taxType === "either" ? setIsBusiness : undefined}
         onValidationChange={(valid, errors) => setValidity({ valid, errors })}
       />
       <ValidationStatus valid={validity.valid} errors={validity.errors} />
       <span style={sectionLabelStyle}>Tax to collect</span>
-      <ConsumptionTaxPanel
+      <TaxPanel
         outcome={outcome}
         country={addressValue.country || defaultCountry || ""}
         state={addressValue.level1}

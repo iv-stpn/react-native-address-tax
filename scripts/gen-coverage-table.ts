@@ -13,13 +13,7 @@
 import countries from "../data/countries.json";
 import { level1Admin_CA, level1Admin_US } from "../src/data/level1-administrative-codes";
 import { POSTAL_CODE_DATA } from "../src/data/postal-codes";
-import {
-  getConsumptionTaxConfig,
-  getConsumptionTaxLabel,
-  getLocalConsumptionTaxLabel,
-  hasRegionalTax,
-  TAX_CONFIG,
-} from "../src/utils/tax";
+import { getLocalTaxLabel, getTaxConfig, getTaxLabel, hasRegionalTax, TAX_CONFIG } from "../src/utils/tax";
 
 const README = new URL("../README.md", import.meta.url).pathname;
 const START = "<!-- COVERAGE_TABLE_START -->";
@@ -50,8 +44,8 @@ function postalExample(code: string): string {
 }
 
 function taxLabel(code: string, region?: string): string {
-  const en = getConsumptionTaxLabel(code, region);
-  const local = getLocalConsumptionTaxLabel(code, region);
+  const en = getTaxLabel(code, region);
+  const local = getLocalTaxLabel(code, region);
   if (!en && !local) return "";
   if (!en) return local!;
   if (!local || en === local) return en;
@@ -59,9 +53,9 @@ function taxLabel(code: string, region?: string): string {
 }
 
 function vatCell(code: string): string {
-  const cfg = getConsumptionTaxConfig(code);
-  if (!cfg?.consumptionTaxPattern) return "❌";
-  const example = cfg.consumptionTaxExample ?? cfg.consumptionTaxPattern.source;
+  const cfg = getTaxConfig(code);
+  if (!cfg?.taxPattern) return "❌";
+  const example = cfg.taxExample ?? cfg.taxPattern.source;
   const label = taxLabel(code);
   return `✅ ${label} (${example})`;
 }
@@ -70,7 +64,7 @@ function vatCell(code: string): string {
 // the country (the "nexus minimum"). collectionThreshold: 0 = always collect on
 // nexus; positive = threshold in local currency; null = seller never collects.
 function nexusCell(code: string, currencyCode: string | undefined): string {
-  const t = getConsumptionTaxConfig(code)?.collectionThreshold;
+  const t = getTaxConfig(code)?.collectionThreshold;
   if (t === undefined) return "❌";
   if (t == null) return "Seller never collects";
   if (t === 0) return "Always";
@@ -116,7 +110,7 @@ function buildRows(): Row[] {
       const label = taxLabel(code);
       tax = `${Math.min(...rates)}–${Math.max(...rates)}% ${label} (regional) ✅`;
     } else {
-      const base = getConsumptionTaxConfig(code)?.baseConsumerTax;
+      const base = getTaxConfig(code)?.baseConsumerTax;
       const label = taxLabel(code);
       tax = base == null ? "None ✅" : `${base}% ${label} ✅`;
     }

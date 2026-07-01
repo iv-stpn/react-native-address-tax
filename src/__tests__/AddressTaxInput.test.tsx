@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AddressInputHandle } from "../components/AddressInput";
 import { AddressTaxInput } from "../components/AddressTaxInput/AddressTaxInput";
 import type { AddressValue } from "../utils/address";
-import type { ConsumptionTaxValue } from "../utils/tax";
+import type { TaxValue } from "../utils/tax";
 
 const baseAddress: AddressValue = {
   line1: "123 Main St",
@@ -39,7 +39,7 @@ describe("AddressTaxInput", () => {
     expect(screen.getByText(/I don't have a/i)).toBeInTheDocument();
     // Tax ID field - use more flexible selector
     const taxInputs = screen.getAllByRole("textbox");
-    const taxIdInput = taxInputs.find((input) => input.getAttribute("id") === "rav-consumptionTaxId");
+    const taxIdInput = taxInputs.find((input) => input.getAttribute("id") === "rav-taxId");
     expect(taxIdInput).toBeDefined();
   });
 
@@ -95,20 +95,15 @@ describe("AddressTaxInput", () => {
     expect(onBusinessChange).toHaveBeenCalledWith(true);
   });
 
-  it("calls onConsumptionTaxChange on mount", () => {
-    const onConsumptionTaxChange = vi.fn();
+  it("calls onTaxChange on mount", () => {
+    const onTaxChange = vi.fn();
     render(
-      <AddressTaxInput
-        addressValue={baseAddress}
-        onAddressChange={() => {}}
-        taxType="business"
-        onConsumptionTaxChange={onConsumptionTaxChange}
-      />,
+      <AddressTaxInput addressValue={baseAddress} onAddressChange={() => {}} taxType="business" onTaxChange={onTaxChange} />,
     );
 
     // Should be called on mount with initial state
-    expect(onConsumptionTaxChange).toHaveBeenCalled();
-    const call = onConsumptionTaxChange.mock.calls[0][0];
+    expect(onTaxChange).toHaveBeenCalled();
+    const call = onTaxChange.mock.calls[0][0];
     expect(call).toHaveProperty("hasIdentifier");
     expect(call).toHaveProperty("baseTax");
     expect(call).toHaveProperty("effectiveTax");
@@ -123,7 +118,7 @@ describe("AddressTaxInput", () => {
       />,
     );
 
-    const input = document.getElementById("rav-consumptionTaxId") as HTMLInputElement;
+    const input = document.getElementById("rav-taxId") as HTMLInputElement;
     expect(input).not.toBeNull();
     await userEvent.type(input, "invalid");
     await userEvent.tab();
@@ -141,10 +136,10 @@ describe("AddressTaxInput", () => {
     );
 
     // France should show "VAT number" - check the input exists
-    const input = document.getElementById("rav-consumptionTaxId") as HTMLInputElement;
+    const input = document.getElementById("rav-taxId") as HTMLInputElement;
     expect(input).not.toBeNull();
     // Check the label contains "VAT"
-    const label = document.querySelector('label[for="rav-consumptionTaxId"]');
+    const label = document.querySelector('label[for="rav-taxId"]');
     expect(label?.textContent).toMatch(/VAT/i);
   });
 
@@ -198,7 +193,7 @@ describe("AddressTaxInput", () => {
       />,
     );
 
-    const input = document.getElementById("rav-consumptionTaxId") as HTMLInputElement;
+    const input = document.getElementById("rav-taxId") as HTMLInputElement;
     expect(input.value).toBe("FR12345678901");
   });
 
@@ -216,17 +211,15 @@ describe("AddressTaxInput", () => {
     expect(screen.getByLabelText(/state/i)).toBeInTheDocument();
   });
 
-  it("marks tax identifier as required when consumptionTaxRequired is true", () => {
-    render(
-      <AddressTaxInput addressValue={baseAddress} onAddressChange={() => {}} taxType="business" consumptionTaxRequired={true} />,
-    );
+  it("marks tax identifier as required when taxRequired is true", () => {
+    render(<AddressTaxInput addressValue={baseAddress} onAddressChange={() => {}} taxType="business" taxRequired={true} />);
 
-    const input = document.getElementById("rav-consumptionTaxId") as HTMLInputElement;
+    const input = document.getElementById("rav-taxId") as HTMLInputElement;
     expect(input).toBeRequired();
   });
 
-  it("updates onConsumptionTaxChange when country changes", async () => {
-    const onConsumptionTaxChange = vi.fn();
+  it("updates onTaxChange when country changes", async () => {
+    const onTaxChange = vi.fn();
     const onAddressChange = vi.fn();
 
     render(
@@ -234,17 +227,17 @@ describe("AddressTaxInput", () => {
         addressValue={baseAddress}
         onAddressChange={onAddressChange}
         taxType="business"
-        onConsumptionTaxChange={onConsumptionTaxChange}
+        onTaxChange={onTaxChange}
       />,
     );
 
-    const initialCallCount = onConsumptionTaxChange.mock.calls.length;
+    const initialCallCount = onTaxChange.mock.calls.length;
 
     const countrySelect = screen.getByLabelText(/country/i);
     await userEvent.selectOptions(countrySelect, "FR");
 
     // Should trigger new tax calculation
-    expect(onConsumptionTaxChange.mock.calls.length).toBeGreaterThan(initialCallCount);
+    expect(onTaxChange.mock.calls.length).toBeGreaterThan(initialCallCount);
   });
 
   it("passes validationMode to AddressInput", () => {
