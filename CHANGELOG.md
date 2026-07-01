@@ -1,5 +1,11 @@
 # react-address-tax
 
+## 1.3.1
+
+### Patch Changes
+
+- [`cc890f0`](https://github.com/iv-stpn/react-address-tax/commit/cc890f0dbdc25096b405d5d885ba5d4884de6989) Thanks [@iv-stpn](https://github.com/iv-stpn)! - Add `computeConsumerConsumptionTaxOutcome()` convenience wrapper for B2C transactions. This function wraps `computeConsumptionTaxOutcome()` with `isBusiness: false` and `hasConsumptionTaxId: false`, making it easier to compute taxes for consumer transactions.
+
 ## 1.3.0
 
 ### Minor Changes
