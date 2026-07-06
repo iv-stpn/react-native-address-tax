@@ -2,11 +2,11 @@ export {
   AddressInput,
   type AddressInputHandle,
   type AddressInputProps,
-} from "./components/AddressInput/index";
+} from "./components/AddressInput";
 export {
   AddressTaxInput,
   type AddressTaxInputProps,
-} from "./components/AddressTaxInput/index";
+} from "./components/AddressTaxInput";
 export type {
   AddressInputStyles,
   RenderCheckboxProps,

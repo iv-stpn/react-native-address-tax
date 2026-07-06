@@ -1,14 +1,14 @@
 import { forwardRef, type ReactNode, useEffect, useState } from "react";
 import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
-import type { AddressCollectionMode, AddressValue, ValidationMode } from "../../utils/address";
-import type { TaxType, TaxValue } from "../../utils/tax";
-import { computeTaxOutcome, getBusinessTaxNumberLabel, getTaxConfig, hasRegionalTax, isEUCountry } from "../../utils/tax";
-import type { ValidationError } from "../../utils/validation";
-import { normalizeTax, validateTax } from "../../utils/validation";
-import { AddressInput, type AddressInputHandle } from "../AddressInput/index";
-import { Checkbox } from "../Checkbox/Checkbox";
-import { defaultStyles } from "../styles";
-import type { RenderCheckboxProps, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "../types";
+import type { AddressCollectionMode, AddressValue, ValidationMode } from "../utils/address";
+import type { TaxType, TaxValue } from "../utils/tax";
+import { computeTaxOutcome, getBusinessTaxNumberLabel, getTaxConfig, hasRegionalTax, isEUCountry } from "../utils/tax";
+import type { ValidationError } from "../utils/validation";
+import { normalizeTax, validateTax } from "../utils/validation";
+import { AddressInput, type AddressInputHandle } from "./AddressInput";
+import { Checkbox } from "./Checkbox";
+import { defaultStyles } from "./styles";
+import type { RenderCheckboxProps, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "./types";
 
 export interface AddressTaxInputProps {
   addressValue: AddressValue;
