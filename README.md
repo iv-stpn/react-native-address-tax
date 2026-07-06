@@ -1,6 +1,6 @@
 # react-native-address-tax
 
-**[Live demo (Ladle storybook) →](https://iv-stpn.github.io/react-native-address-tax/)**
+**[Live demo →](https://iv-stpn.github.io/react-native-address-tax/)**
 
 > [!WARNING] **Work in progress — not production ready.** This project is under
 > active development. The data (tax rates, address formats, VAT number patterns,
@@ -20,7 +20,7 @@ bun install
 ## Develop
 
 ```bash
-bun run ladle        # component playground / stories
+bun run demo         # component playground / stories
 bun run test         # run the test suite (vitest)
 bun run typecheck    # type-check without emitting
 bun run lint         # biome check
