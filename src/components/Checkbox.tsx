@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from "react-native";
-import { defaultStyles } from "../styles";
-import type { RenderCheckboxProps } from "../types";
+import { defaultStyles } from "./styles";
+import type { RenderCheckboxProps } from "./types";
 
 // Dependency-free checkbox: a Pressable box that shows a checkmark when on.
 // Carries `role="checkbox"` + `aria-checked` and mirrors its label into

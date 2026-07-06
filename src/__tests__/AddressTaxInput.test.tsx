@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { type Ref } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AddressInputHandle } from "../components/AddressInput";
-import { AddressTaxInput } from "../components/AddressTaxInput/AddressTaxInput";
+import { AddressTaxInput } from "../components/AddressTaxInput";
 import type { AddressValue } from "../utils/address";
 
 const baseAddress: AddressValue = {

@@ -1,12 +1,12 @@
 import { Fragment, forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
-import type { AddressCollectionMode, AddressValue, ValidationMode } from "../../utils/address";
-import { ALL_COUNTRY_OPTIONS, getCountryConfig, resolveAddressField } from "../../utils/address";
-import type { ValidationError, ValidationResult } from "../../utils/validation";
-import { computeEffectiveFields, validateAddress } from "../../utils/validation";
-import { Select } from "../Select/Select";
-import { defaultStyles } from "../styles";
-import type { AddressInputStyles, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "../types";
+import type { AddressCollectionMode, AddressValue, ValidationMode } from "../utils/address";
+import { ALL_COUNTRY_OPTIONS, getCountryConfig, resolveAddressField } from "../utils/address";
+import type { ValidationError, ValidationResult } from "../utils/validation";
+import { computeEffectiveFields, validateAddress } from "../utils/validation";
+import { Select } from "./Select";
+import { defaultStyles } from "./styles";
+import type { AddressInputStyles, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "./types";
 
 /** Imperative handle exposed via ref, primarily for the "onSubmit" validation mode. */
 export interface AddressInputHandle {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { defaultStyles } from "../styles";
-import type { RenderSelectProps } from "../types";
+import { defaultStyles } from "./styles";
+import type { RenderSelectProps } from "./types";
 
 // Dependency-free dropdown, since React Native has no <select>. A Pressable
 // trigger opens a Modal overlay with a search box and a scrollable option list.
