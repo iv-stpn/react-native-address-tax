@@ -67,7 +67,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "biome check .",
     "lint:fix": "biome check . --write",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p demo/tsconfig.json && tsc -p scripts/tsconfig.json",
     "prepublishOnly": "bun run build && bun run typecheck",
     "changeset": "changeset",
     "version": "changeset version",

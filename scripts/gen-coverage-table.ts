@@ -174,8 +174,9 @@ interface PrevRow {
 function parsePrev(block: string): { map: Map<string, PrevRow>; dataCols: string[] } {
   const map = new Map<string, PrevRow>();
   const lines = block.split("\n").filter((l) => l.trim().startsWith("|"));
-  if (lines.length < 2) return { map, dataCols: [...DATA_COLS] };
-  const cols = lines[0]
+  const [headerLine] = lines;
+  if (!headerLine || lines.length < 2) return { map, dataCols: [...DATA_COLS] };
+  const cols = headerLine
     .split("|")
     .slice(1, -1)
     .map((s) => s.trim());
@@ -190,11 +191,11 @@ function parsePrev(block: string): { map: Map<string, PrevRow>; dataCols: string
       .slice(1, -1)
       .map((s) => s.trim());
     if (cells.length !== cols.length) continue;
-    const rawCode = cells[codeI];
+    const rawCode = cells[codeI] ?? "";
     const hadBang = rawCode.includes("❗");
     const code = rawCode.replace("❗", "").trim();
     const signature = dataCols.map((c) => cells[idx(c)]).join("§");
-    map.set(code, { lastVerified: dateI >= 0 ? cells[dateI] : "—", signature, hadBang });
+    map.set(code, { lastVerified: dateI >= 0 ? (cells[dateI] ?? "—") : "—", signature, hadBang });
   }
   return { map, dataCols };
 }
@@ -238,7 +239,7 @@ function main() {
       const tail = md.slice(hdrStart);
       const tableLines = tail.split("\n");
       let last = 0;
-      while (last < tableLines.length && tableLines[last].trim().startsWith("|")) last++;
+      while (last < tableLines.length && (tableLines[last] ?? "").trim().startsWith("|")) last++;
       prevBlock = tableLines.slice(0, last).join("\n");
       md = md.slice(0, hdrStart).replace(/^- \*\*Verified\*\* —.*\n/m, "") + tableLines.slice(last).join("\n");
     }

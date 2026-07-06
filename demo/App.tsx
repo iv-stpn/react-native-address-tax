@@ -4,7 +4,7 @@
 // drives the components entirely through their render props.
 import { useMemo, useRef, useState } from "react";
 import { Pressable, TextInput as RNTextInput, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Select } from "../src/components/Select/Select";
+import { Select } from "../src/components/Select";
 import {
   type AddressCollectionMode,
   AddressInput,
