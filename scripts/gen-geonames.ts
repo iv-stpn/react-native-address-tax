@@ -22,7 +22,7 @@ const outDir = resolve(__dirname, "../data");
 
 const BASE = "https://download.geonames.org/export/dump";
 const WIKIDATA_SPARQL = "https://query.wikidata.org/sparql";
-const USER_AGENT = "react-address-tax-geonames-script/1.0 (data enrichment)";
+const USER_AGENT = "react-native-address-tax-geonames-script/1.0 (data enrichment)";
 
 // Defunct ISO 3166-1 alpha-2 codes still present in some GeoNames data that we
 // exclude from output: AN (Netherlands Antilles), CS (Serbia and Montenegro).

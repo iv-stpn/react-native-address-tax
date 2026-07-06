@@ -1,11 +1,13 @@
 {
-  "name": "react-address-tax",
-  "version": "2.1.0",
-  "description": "Reusable React component for international structured address input with VAT validation",
+  "name": "react-native-address-tax",
+  "version": "1.0.0",
+  "description": "Reusable React Native component for international structured address input with VAT validation (runs on web via react-native-web)",
   "keywords": [
+    "react-native",
+    "react-native-web",
     "react",
     "address",
-    "vat",
+    "tax",
     "international",
     "form",
     "component"
@@ -14,11 +16,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/iv-stpn/react-address-tax.git"
+    "url": "https://github.com/iv-stpn/react-native-address-tax.git"
   },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
+  "react-native": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -69,8 +72,8 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "bun run build && bun run typecheck && changeset publish",
-    "ladle": "ladle serve",
-    "ladle:build": "ladle build --base /react-address-tax/",
+    "demo": "vite --config demo/vite.config.ts",
+    "demo:build": "vite --config demo/vite.config.ts build --base /react-native-address-tax/",
     "gen:geonames": "bun run scripts/gen-geonames.ts",
     "gen:level1": "bun run scripts/gen-level1-codes.ts",
     "gen:countries": "bun run scripts/gen-countries.ts",
@@ -79,14 +82,17 @@
   },
   "peerDependencies": {
     "react": ">=17.0.0",
-    "react-dom": ">=17.0.0"
+    "react-native": ">=0.70.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "@ladle/react": "^5.1.1",
-    "@tailwindcss/vite": "^4.3.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -100,7 +106,8 @@
     "randexp": "^0.5.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "tailwindcss": "^4.3.1",
+    "react-native": "0.76.5",
+    "react-native-web": "^0.21.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vite": "^8",

@@ -8,9 +8,16 @@ export {
   type AddressTaxInputProps,
 } from "./components/AddressTaxInput/index";
 export type {
+  AddressInputStyles,
+  RenderCheckboxProps,
+  RenderContainerProps,
+  RenderFieldEntry,
+  RenderInputProps,
+  RenderSelectProps,
+} from "./components/types";
+export type {
   AddressCollectionMode,
   AddressFieldKey,
-  AddressInputClassNames,
   AddressValue,
   AddressValueInput,
   CountryAddressConfig,

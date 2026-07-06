@@ -1,18 +1,14 @@
-import { type ChangeEvent, forwardRef, type ReactNode, useEffect, useState } from "react";
+import { forwardRef, type ReactNode, useEffect, useState } from "react";
+import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
 import type { AddressCollectionMode, AddressValue, ValidationMode } from "../../utils/address";
 import type { TaxType, TaxValue } from "../../utils/tax";
 import { computeTaxOutcome, getBusinessTaxNumberLabel, getTaxConfig, hasRegionalTax, isEUCountry } from "../../utils/tax";
 import type { ValidationError } from "../../utils/validation";
 import { normalizeTax, validateTax } from "../../utils/validation";
-import type {
-  AddressInputHandle,
-  RenderCheckboxProps,
-  RenderContainerProps,
-  RenderFieldEntry,
-  RenderInputProps,
-  RenderSelectProps,
-} from "../AddressInput";
-import { AddressInput } from "../AddressInput/index";
+import { AddressInput, type AddressInputHandle } from "../AddressInput/index";
+import { Checkbox } from "../Checkbox/Checkbox";
+import { defaultStyles } from "../styles";
+import type { RenderCheckboxProps, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "../types";
 
 export interface AddressTaxInputProps {
   addressValue: AddressValue;
@@ -52,12 +48,13 @@ export interface AddressTaxInputProps {
   validationMode?: ValidationMode;
   defaultCountry?: string;
   defaultRegion?: string;
-  /** Placeholder shown in the country selector's empty option. Defaults to "Select country". */
+  /** Placeholder shown in the country selector when nothing is selected. Defaults to "Select country". */
   countryPlaceholder?: string;
-  /** Placeholder shown in the level-1 administrative selector's empty option, as a function of the field's label. */
+  /** Placeholder shown in the level-1 administrative selector, as a function of the field's label. */
   level1AdministrativePlaceholder?: (label: string) => string;
   disabled?: boolean;
-  className?: string;
+  /** Style applied to the root View. */
+  style?: RenderContainerProps["style"];
   renderInput?: (props: RenderInputProps) => ReactNode;
   renderCheckbox?: (props: RenderCheckboxProps) => ReactNode;
   /** Custom renderer for the country selector. */
@@ -69,9 +66,7 @@ export interface AddressTaxInputProps {
   /**
    * Custom layout for the fields. Receives the list of rendered field nodes
    * (each tagged with its `type`) in display order, and returns the node to
-   * render in place of the default inline layout. Use this to group fields onto
-   * the same line or into separate containers. When undefined, fields render
-   * inline as before.
+   * render in place of the default column layout.
    *
    * The `type` is "business" for the Business account checkbox, "country" or an
    * address field key (line1, line2, city, level1, postalCode) for address
@@ -134,7 +129,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     countryPlaceholder,
     level1AdministrativePlaceholder,
     disabled = false,
-    className,
+    style,
     renderInput,
     renderCheckbox,
     renderCountrySelect,
@@ -198,8 +193,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
   const taxInvalid = taxTouched && !!taxId ? !validateTax(taxId, country) : false;
   const taxError = taxInvalid ? `Invalid ${businessTaxNumberLabel} format. Expected: ${taxConfig?.taxExample ?? ""}.` : undefined;
 
-  function handleBusinessChange(e: ChangeEvent<HTMLInputElement>) {
-    const val = e.target.checked;
+  function handleBusinessChange(val: boolean) {
     setInternalIsBusiness(val);
     onBusinessChange?.(val);
     if (!val) {
@@ -220,8 +214,9 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     }
   }
 
-  function handleHasTaxIdentifierChange(e: ChangeEvent<HTMLInputElement>) {
-    const val = !e.target.checked;
+  function handleHasTaxIdentifierChange(checked: boolean) {
+    // The checkbox is "I don't have a …", so its checked state is the inverse.
+    const val = !checked;
     setInternalHasTaxIdentifier(val);
     onHasTaxIdentifierChange?.(val);
     if (!val) {
@@ -255,10 +250,10 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     }
   }
 
-  function handleTaxChange(e: ChangeEvent<HTMLInputElement>) {
-    setTaxId(e.target.value);
+  function handleTaxChange(text: string) {
+    setTaxId(text);
     onTaxChange?.({
-      taxId: e.target.value || undefined,
+      taxId: text || undefined,
       hasIdentifier,
       baseTax,
       effectiveTax,
@@ -284,44 +279,36 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     setTaxTouched(true);
   }
 
-  const cn = (base: string, custom?: string) => [base, custom].filter(Boolean).join(" ");
-
   // --- Default render helpers ---
 
   function renderCheckboxEl(props: RenderCheckboxProps) {
     if (renderCheckbox) return renderCheckbox(props);
-    return (
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          cursor: "pointer",
-        }}
-      >
-        <input type="checkbox" checked={props.checked} onChange={props.onChange} disabled={props.disabled} />
-        <span className="rav-label" style={{ margin: 0 }}>
-          {props.label}
-        </span>
-      </label>
-    );
+    return <Checkbox {...props} />;
   }
 
   function renderInputEl(props: RenderInputProps) {
     if (renderInput) return renderInput(props);
+    const inputStyle: StyleProp<TextStyle> = [
+      defaultStyles.input,
+      props.invalid && defaultStyles.inputInvalid,
+      props.disabled && defaultStyles.inputDisabled,
+      props.style,
+    ];
     return (
-      <input
-        id={props.id}
-        type="text"
-        className={props.className}
+      <TextInput
+        testID={props.id}
+        nativeID={props.id}
+        style={inputStyle}
         value={props.value}
-        onChange={props.onChange}
+        onChangeText={props.onChangeText}
         onBlur={props.onBlur}
         placeholder={props.placeholder}
-        disabled={props.disabled}
+        placeholderTextColor="#94a3b8"
+        editable={!props.disabled}
+        accessibilityLabel={props.accessibilityLabel}
+        aria-label={props.accessibilityLabel}
         aria-required={props.required}
-        aria-invalid={props["aria-invalid"]}
-        aria-describedby={props["aria-describedby"]}
+        aria-invalid={props.invalid}
       />
     );
   }
@@ -329,18 +316,18 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
   function renderContainerEl(containerProps: RenderContainerProps) {
     if (renderContainer) return renderContainer(containerProps);
     return (
-      <div className={cn("rav-field", containerProps.className)}>
-        <label className="rav-label" htmlFor={containerProps.id}>
+      <View style={[defaultStyles.field, containerProps.style]}>
+        <Text nativeID={`${containerProps.id}-label`} style={defaultStyles.label}>
           {containerProps.label}
-          {containerProps.required && <span aria-hidden="true"> *</span>}
-        </label>
+          {containerProps.required ? <Text style={defaultStyles.required}> *</Text> : null}
+        </Text>
         {containerProps.children}
-        {containerProps.error && (
-          <span id={`${containerProps.id}-error`} className="rav-error" role="alert">
+        {containerProps.error ? (
+          <Text testID={`${containerProps.id}-error`} role="alert" style={defaultStyles.error}>
             {containerProps.error}
-          </span>
-        )}
-      </div>
+          </Text>
+        ) : null}
+      </View>
     );
   }
 
@@ -348,25 +335,25 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
 
   const businessCheckboxNode =
     taxType === "either" ? (
-      <div className="rav-field">
+      <View style={defaultStyles.field}>
         {renderCheckboxEl({
           checked: isBusiness,
-          onChange: handleBusinessChange,
+          onValueChange: handleBusinessChange,
           disabled,
           label: "Business account",
         })}
-      </div>
+      </View>
     ) : null;
 
   const noTaxIdentifierNode = showTaxFields ? (
-    <div className="rav-field">
+    <View style={defaultStyles.field}>
       {renderCheckboxEl({
         checked: !hasTaxIdentifier,
-        onChange: handleHasTaxIdentifierChange,
+        onValueChange: handleHasTaxIdentifierChange,
         disabled,
         label: `I don't have a ${businessTaxNumberLabel}`,
       })}
-    </div>
+    </View>
   ) : null;
 
   const taxIdNode =
@@ -380,14 +367,13 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
           children: renderInputEl({
             id: taxInputId,
             value: taxId,
-            onChange: handleTaxChange,
+            onChangeText: handleTaxChange,
             onBlur: handleTaxBlur,
             placeholder: taxConfig?.taxExample,
             disabled,
             required: taxRequired,
-            "aria-invalid": taxInvalid,
-            "aria-describedby": taxError ? `${taxInputId}-error` : undefined,
-            className: "rav-input",
+            invalid: taxInvalid,
+            accessibilityLabel: businessTaxNumberLabel,
           }),
         })
       : null;
@@ -399,7 +385,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
   if (taxIdNode) afterEntries.push({ type: "taxId", node: taxIdNode });
 
   return (
-    <div className={cn("rav-root", className)}>
+    <View style={[defaultStyles.root, style]}>
       {!renderFields && businessCheckboxNode}
 
       <AddressInput
@@ -424,12 +410,12 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
         }
       />
 
-      {!renderFields && showTaxFields && (
+      {!renderFields && showTaxFields ? (
         <>
           {noTaxIdentifierNode}
           {taxIdNode}
         </>
-      )}
-    </div>
+      ) : null}
+    </View>
   );
 });

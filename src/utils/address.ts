@@ -3,7 +3,6 @@
 // so the bundler tree-shakes away every country we don't import below — the
 // full set of divisions never reaches the published build.
 
-import type { ChangeEventHandler, ReactNode } from "react";
 // Full country reference data (every country), generated from data/countries.json
 // by scripts/gen-countries.ts. Source of postal-code patterns and level-1
 // division labels below.
@@ -288,20 +287,6 @@ export type AddressCollectionMode =
  *   (via the component's ref `validate()` handle).
  */
 export type ValidationMode = "onType" | "onBlur" | "onSubmit";
-
-// ---------------------------------------------------------------------------
-// Shared render-prop types (used by both AddressInput and AddressTaxInput).
-// ---------------------------------------------------------------------------
-
-export interface AddressInputClassNames {
-  root: string;
-  row: string;
-  field: string;
-  label: string;
-  input: string;
-  select: string;
-  error: string;
-}
 
 export type AddressFieldKey = "line1" | "line2" | "city" | "level1" | "postalCode" | "country";
 

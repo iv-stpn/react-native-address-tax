@@ -1,11 +1,10 @@
-// Public, component-free utility surface, importable from "react-address-tax/utils".
+// Public, component-free utility surface, importable from "react-native-address-tax/utils".
 // Address config/types, tax computation, and validation helpers — everything in
 // the library that doesn't pull in React.
 
 export type {
   AddressCollectionMode,
   AddressFieldKey,
-  AddressInputClassNames,
   AddressValue,
   CountryAddressConfig,
   CountryCode,

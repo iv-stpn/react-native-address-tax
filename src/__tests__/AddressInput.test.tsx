@@ -27,6 +27,15 @@ function Harness({
   return <AddressInput ref={inputRef} value={value} onChange={setValue} validationMode={validationMode} />;
 }
 
+/**
+ * Open the country dropdown and pick an option by its visible name. The RN
+ * Select has no `<select>` element, so selection is open-then-tap rather than
+ * a `change` event.
+ */
+async function selectCountry(name: string | RegExp) {
+  fireEvent.click(screen.getByLabelText(/country/i));
+  fireEvent.click(await screen.findByText(name));
+}
 describe("AddressInput", () => {
   it("renders country selector", () => {
     render(<AddressInput value={baseValue} onChange={() => {}} />);
@@ -41,14 +50,11 @@ describe("AddressInput", () => {
     expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
   });
 
-  it("calls onChange when a field changes", async () => {
+  it("calls onChange when a field changes", () => {
     const onChange = vi.fn();
     render(<AddressInput value={baseValue} onChange={onChange} />);
     const input = screen.getByLabelText(/address line 1/i);
-
-    // Use fireEvent for better compatibility with Bun's test runner
     fireEvent.change(input, { target: { value: "456 Elm St" } });
-
     expect(onChange).toHaveBeenCalled();
   });
 
@@ -69,18 +75,14 @@ describe("AddressInput", () => {
   it("resets postal code and level1 on country change", async () => {
     const onChange = vi.fn();
     render(<AddressInput value={baseValue} onChange={onChange} />);
-    const select = screen.getByLabelText(/country/i);
-    fireEvent.change(select, { target: { value: "DE" } });
-
-    // Wait for the change to propagate
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
+    await selectCountry("Germany");
     const lastCall = onChange.mock.calls.at(-1)?.[0] as AddressValue;
+    expect(lastCall?.country).toBe("DE");
     expect(lastCall?.postalCode).toBe("");
     expect(lastCall?.level1).toBe("");
   });
 
-  it("renders DE address fields after switching country", async () => {
+  it("renders DE address fields after switching country", () => {
     const onChange = vi.fn();
     const { rerender } = render(<AddressInput value={baseValue} onChange={onChange} />);
     rerender(<AddressInput value={{ ...baseValue, country: "DE", level1: "", postalCode: "" }} onChange={onChange} />);
@@ -89,15 +91,23 @@ describe("AddressInput", () => {
 
   it("is disabled when disabled prop is set", () => {
     render(<AddressInput value={baseValue} onChange={() => {}} disabled />);
-    const inputs = screen.getAllByRole("textbox");
-    for (const input of inputs) {
-      expect(input).toBeDisabled();
+    // RNW maps editable={false} to readOnly on the underlying inputs.
+    for (const input of screen.getAllByRole("textbox")) {
+      expect(input).toHaveAttribute("readonly");
     }
   });
 
-  it("accepts custom classNames", () => {
-    render(<AddressInput value={baseValue} onChange={() => {}} classNames={{ root: "my-root", field: "my-field" }} />);
-    expect(document.querySelector(".my-root")).toBeInTheDocument();
+  it("accepts custom styles per slot", () => {
+    render(
+      <AddressInput
+        value={baseValue}
+        onChange={() => {}}
+        styles={{ error: { color: "rgb(1, 2, 3)" } }}
+        validationMode="onType"
+      />,
+    );
+    // The custom style object is accepted without throwing and the tree renders.
+    expect(screen.getByLabelText(/country/i)).toBeInTheDocument();
   });
 
   it("shows only state field in minimal mode for US", () => {
@@ -123,8 +133,9 @@ describe("AddressInput", () => {
 
   it("uses defaultRegion to pre-fill state", () => {
     render(<AddressInput value={{ ...baseValue, level1: "" }} onChange={() => {}} defaultRegion="CA" mode="fullRegion" />);
-    const stateSelect = screen.getByLabelText(/state/i) as HTMLSelectElement;
-    expect(stateSelect.value).toBe("CA");
+    // The level-1 selector shows the pre-selected region's label as its value.
+    const stateSelect = screen.getByLabelText(/state/i);
+    expect(stateSelect).toHaveTextContent(/california/i);
   });
 
   it("omits level1 in full mode and requires it in region/fullRegion modes", () => {

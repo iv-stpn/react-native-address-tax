@@ -1,10 +1,13 @@
+export type {
+  AddressInputStyles,
+  RenderCheckboxProps,
+  RenderContainerProps,
+  RenderFieldEntry,
+  RenderInputProps,
+  RenderSelectProps,
+} from "../types";
 export {
   AddressInput,
   type AddressInputHandle,
   type AddressInputProps,
-  type RenderCheckboxProps,
-  type RenderContainerProps,
-  type RenderFieldEntry,
-  type RenderInputProps,
-  type RenderSelectProps,
 } from "./AddressInput";

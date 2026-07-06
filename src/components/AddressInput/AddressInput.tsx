@@ -1,80 +1,12 @@
-import {
-  type ChangeEvent,
-  type ChangeEventHandler,
-  Fragment,
-  forwardRef,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
-import type {
-  AddressCollectionMode,
-  AddressFieldKey,
-  AddressInputClassNames,
-  AddressValue,
-  ValidationMode,
-} from "../../utils/address";
+import { Fragment, forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
+import type { AddressCollectionMode, AddressValue, ValidationMode } from "../../utils/address";
 import { ALL_COUNTRY_OPTIONS, getCountryConfig, resolveAddressField } from "../../utils/address";
 import type { ValidationError, ValidationResult } from "../../utils/validation";
 import { computeEffectiveFields, validateAddress } from "../../utils/validation";
-
-export interface RenderInputProps {
-  id: string;
-  value: string;
-  onChange: ChangeEventHandler<HTMLInputElement>;
-  onBlur?: () => void;
-  placeholder?: string;
-  disabled?: boolean;
-  required?: boolean;
-  "aria-invalid"?: boolean;
-  "aria-describedby"?: string;
-  className?: string;
-}
-
-export interface RenderSelectProps {
-  id: string;
-  value: string;
-  onChange: ChangeEventHandler<HTMLSelectElement>;
-  onBlur?: () => void;
-  disabled?: boolean;
-  required?: boolean;
-  "aria-invalid"?: boolean;
-  "aria-describedby"?: string;
-  className?: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  /** Text shown in the disabled empty option. */
-  placeholder?: string;
-}
-
-export interface RenderCheckboxProps {
-  id?: string;
-  checked: boolean;
-  onChange: ChangeEventHandler<HTMLInputElement>;
-  disabled?: boolean;
-  label: string;
-  className?: string;
-}
-
-export interface RenderContainerProps {
-  /** Matches the input element's id, for use in label's htmlFor. */
-  id: string;
-  fieldKey: string;
-  label: string;
-  required?: boolean;
-  error?: string;
-  children: ReactNode;
-  className?: string;
-}
-
-/** A single rendered field, paired with its type, passed to `renderFields`. */
-export interface RenderFieldEntry {
-  /** The field's key: "country" or one of the address field keys (line1, line2, city, level1, postalCode). */
-  type: string;
-  node: ReactNode;
-}
+import { Select } from "../Select/Select";
+import { defaultStyles } from "../styles";
+import type { AddressInputStyles, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "../types";
 
 /** Imperative handle exposed via ref, primarily for the "onSubmit" validation mode. */
 export interface AddressInputHandle {
@@ -100,26 +32,28 @@ export interface AddressInputProps {
   validationMode?: ValidationMode;
   /**
    * When true, the fields are rendered directly (in a Fragment) instead of being
-   * wrapped in a `rav-root` container. Use this when embedding AddressInput inside
-   * another component that already provides the root wrapper, to avoid nesting two
-   * `rav-root` elements. `className`/`classNames.root` are ignored in this mode.
+   * wrapped in a root `View`. Use this when embedding AddressInput inside another
+   * component that already provides the root wrapper. `style`/`styles.root` are
+   * ignored in this mode.
    */
   inline?: boolean;
   /** Pre-selects a country and moves the country selector to the bottom of the form. */
   defaultCountry?: string;
   /** Pre-selects a state/region. */
   defaultRegion?: string;
-  /** Placeholder shown in the country selector's empty option. Defaults to "Select country". */
+  /** Placeholder shown in the country selector when nothing is selected. Defaults to "Select country". */
   countryPlaceholder?: string;
   /**
    * Placeholder shown in the level-1 (state/province/region) administrative
-   * selector's empty option, as a function of the field's label.
+   * selector, as a function of the field's label.
    * Defaults to `(label) => \`Select ${label}\``.
    */
   level1AdministrativePlaceholder?: (label: string) => string;
   disabled?: boolean;
-  className?: string;
-  classNames?: Partial<AddressInputClassNames>;
+  /** Style applied to the root View (ignored when `inline`). */
+  style?: AddressInputStyles["root"];
+  /** Per-slot style overrides for the default-rendered fields. */
+  styles?: Partial<AddressInputStyles>;
   renderInput?: (props: RenderInputProps) => ReactNode;
   /** Custom renderer for the country selector. */
   renderCountrySelect?: (props: RenderSelectProps) => ReactNode;
@@ -129,9 +63,7 @@ export interface AddressInputProps {
   /**
    * Custom layout for the fields. Receives the list of rendered field nodes
    * (each tagged with its `type`) in display order, and returns the node to
-   * render in place of the default inline layout. Use this to group fields onto
-   * the same line or into separate containers. When undefined, fields render
-   * inline as before.
+   * render in place of the default column layout.
    */
   renderFields?: (fields: RenderFieldEntry[]) => ReactNode;
 }
@@ -154,8 +86,8 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
     validationMode = "onType",
     inline = false,
     disabled = false,
-    className,
-    classNames,
+    style,
+    styles,
     defaultCountry,
     defaultRegion,
     countryPlaceholder = "Select country",
@@ -215,8 +147,8 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
   useImperativeHandle(ref, () => ({ validate: () => validateRef.current() }), []);
 
   function handleField(field: keyof AddressValue) {
-    return (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const next: AddressValue = { ...currentValue, [field]: e.target.value };
+    return (text: string) => {
+      const next: AddressValue = { ...currentValue, [field]: text };
       if (field === "country") {
         next.level1 = "";
         next.postalCode = "";
@@ -240,81 +172,62 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
     return errors.find((e) => e.field === field)?.message;
   }
 
-  const cn = (base: string, custom?: string) => [base, custom].filter(Boolean).join(" ");
-
   const effectiveFieldOrder = computeEffectiveFields(mode, currentValue.country);
 
   // --- Default render helpers ---
 
   function renderInputEl(props: RenderInputProps) {
     if (renderInput) return renderInput(props);
+    const inputStyle: StyleProp<TextStyle> = [
+      defaultStyles.input,
+      props.invalid && defaultStyles.inputInvalid,
+      props.disabled && defaultStyles.inputDisabled,
+      props.style,
+    ];
     return (
-      <input
-        id={props.id}
-        type="text"
-        className={props.className}
+      <TextInput
+        testID={props.id}
+        nativeID={props.id}
+        style={inputStyle}
         value={props.value}
-        onChange={props.onChange}
+        onChangeText={props.onChangeText}
         onBlur={props.onBlur}
         placeholder={props.placeholder}
-        disabled={props.disabled}
+        placeholderTextColor="#94a3b8"
+        editable={!props.disabled}
+        accessibilityLabel={props.accessibilityLabel}
+        aria-label={props.accessibilityLabel}
         aria-required={props.required}
-        aria-invalid={props["aria-invalid"]}
-        aria-describedby={props["aria-describedby"]}
+        aria-invalid={props.invalid}
       />
-    );
-  }
-
-  function defaultSelectEl(props: RenderSelectProps) {
-    return (
-      <select
-        id={props.id}
-        className={props.className}
-        value={props.value}
-        onChange={props.onChange}
-        onBlur={props.onBlur}
-        disabled={props.disabled}
-        aria-required={props.required}
-        aria-invalid={props["aria-invalid"]}
-        aria-describedby={props["aria-describedby"]}
-      >
-        <option value="" disabled>
-          {props.placeholder ?? "Select"}
-        </option>
-        {props.options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
     );
   }
 
   function renderCountrySelectEl(props: RenderSelectProps) {
     if (renderCountrySelect) return renderCountrySelect(props);
-    return defaultSelectEl(props);
+    return <Select {...props} />;
   }
 
   function renderLevel1AdministrativeSelectEl(props: RenderSelectProps) {
     if (renderLevel1AdministrativeSelect) return renderLevel1AdministrativeSelect(props);
-    return defaultSelectEl(props);
+    return <Select {...props} />;
   }
 
   function renderContainerEl(containerProps: RenderContainerProps) {
     if (renderContainer) return renderContainer(containerProps);
     return (
-      <div className={cn("rav-field", containerProps.className)}>
-        <label className={cn("rav-label", classNames?.label)} htmlFor={containerProps.id}>
+      <View style={[defaultStyles.field, containerProps.style]}>
+        <Text nativeID={`${containerProps.id}-label`} style={[defaultStyles.label, styles?.label]}>
           {containerProps.label}
-          {containerProps.required && <span aria-hidden="true"> *</span>}
-        </label>
+          {containerProps.required ? <Text style={defaultStyles.required}> *</Text> : null}
+        </Text>
         {containerProps.children}
-        {containerProps.error && (
-          <span id={`${containerProps.id}-error`} className={cn("rav-error", classNames?.error)} role="alert">
+        {containerProps.error ? (
+          <Text testID={`${containerProps.id}-error`} role="alert" style={[defaultStyles.error, styles?.error]}>
             {containerProps.error}
-          </span>
-        )}
-      </div>
+          </Text>
+        ) : null}
+      </View>
     );
   }
 
@@ -329,17 +242,17 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
     label: "Country",
     required: true,
     error: countryError,
-    className: classNames?.field,
+    style: styles?.field,
     children: renderCountrySelectEl({
       id: countryId,
       value: currentValue.country,
-      onChange: handleField("country"),
+      onValueChange: handleField("country"),
       onBlur: () => handleBlur("country"),
       disabled,
       required: true,
-      "aria-invalid": countryError !== undefined,
-      "aria-describedby": countryError ? `${countryId}-error` : undefined,
-      className: cn("rav-select", classNames?.select),
+      invalid: countryError !== undefined,
+      accessibilityLabel: "Country",
+      style: styles?.select,
       options: ALL_COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.name })),
       placeholder: countryPlaceholder,
     }),
@@ -360,27 +273,27 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
         ? renderLevel1AdministrativeSelectEl({
             id: inputId,
             value: currentFieldValue,
-            onChange: handleField(fieldKey),
+            onValueChange: handleField(fieldKey),
             onBlur: () => handleBlur(fieldKey),
             disabled,
             required: fieldCfg.required,
-            "aria-invalid": error !== undefined,
-            "aria-describedby": error ? `${inputId}-error` : undefined,
-            className: cn("rav-select", classNames?.select),
+            invalid: error !== undefined,
+            accessibilityLabel: fieldCfg.label,
+            style: styles?.select,
             options: fieldCfg.options,
             placeholder: level1AdministrativePlaceholder(fieldCfg.label),
           })
         : renderInputEl({
             id: inputId,
             value: currentFieldValue,
-            onChange: handleField(fieldKey),
+            onChangeText: handleField(fieldKey),
             onBlur: () => handleBlur(fieldKey),
             placeholder: fieldCfg.placeholder,
             disabled,
             required: fieldCfg.required,
-            "aria-invalid": error !== undefined,
-            "aria-describedby": error ? `${inputId}-error` : undefined,
-            className: cn("rav-input", classNames?.input),
+            invalid: error !== undefined,
+            accessibilityLabel: fieldCfg.label,
+            style: styles?.input,
           });
 
       fieldEntries.push({
@@ -393,7 +306,7 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
               label: fieldCfg.label,
               required: fieldCfg.required,
               error,
-              className: classNames?.field,
+              style: styles?.field,
               children: inputElement,
             })}
           </Fragment>
@@ -414,7 +327,7 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
     </>
   );
 
-  if (inline) return body;
+  if (inline) return <>{body}</>;
 
-  return <div className={cn("rav-root", className ?? classNames?.root)}>{body}</div>;
+  return <View style={[defaultStyles.root, style ?? styles?.root]}>{body}</View>;
 });
