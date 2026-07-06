@@ -78,7 +78,7 @@
     "gen:level1": "bun run scripts/gen-level1-codes.ts",
     "gen:countries": "bun run scripts/gen-countries.ts",
     "gen:coverage": "bun run scripts/gen-coverage-table.ts",
-    "prepare": "husky"
+    "prepare": "node .husky/install.mjs"
   },
   "peerDependencies": {
     "react": ">=17.0.0",
