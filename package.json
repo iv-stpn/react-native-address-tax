@@ -1,6 +1,6 @@
 {
   "name": "react-native-address-tax",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reusable React Native component for international structured address input with VAT validation (runs on web via react-native-web)",
   "keywords": [
     "react-native",
