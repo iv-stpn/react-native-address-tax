@@ -17,7 +17,43 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "none"
+      "preset": "none",
+      "complexity": {
+        "noBannedTypes": "error",
+        "noUselessThisAlias": "error",
+        "noUselessTypeConstraint": "error"
+      },
+      "correctness": {
+        "noChildrenProp": "error",
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "error",
+        "useJsxKeyInIterable": "error"
+      },
+      "security": {
+        "noBlankTarget": "error",
+        "noDangerouslySetInnerHtmlWithChildren": "error"
+      },
+      "style": {
+        "noCommonJs": "error",
+        "noNamespace": "error",
+        "useArrayLiterals": "error",
+        "useAsConstAssertion": "error"
+      },
+      "suspicious": {
+        "noCommentText": "error",
+        "noDuplicateEnumValues": "error",
+        "noDuplicateJsxProps": "error",
+        "noExplicitAny": "error",
+        "noExtraNonNullAssertion": "error",
+        "noMisleadingInstantiator": "error",
+        "noNonNullAssertedOptionalChain": "error",
+        "noTsIgnore": "error",
+        "noUnknownAttribute": "error",
+        "noUnsafeDeclarationMerging": "error",
+        "noUnusedExpressions": "off",
+        "useNamespaceKeyword": "error"
+      }
     },
     "includes": ["**", "!data/**", "!dist/**", "!node_modules/**"]
   },
@@ -26,54 +62,6 @@
       "quoteStyle": "double"
     }
   },
-  "overrides": [
-    {
-      "includes": ["src/**/*.{ts,tsx}"],
-      "javascript": {
-        "globals": []
-      },
-      "linter": {
-        "rules": {
-          "complexity": {
-            "noBannedTypes": "error",
-            "noUselessThisAlias": "error",
-            "noUselessTypeConstraint": "error"
-          },
-          "correctness": {
-            "noChildrenProp": "error",
-            "noUnusedVariables": "error",
-            "useExhaustiveDependencies": "warn",
-            "useHookAtTopLevel": "error",
-            "useJsxKeyInIterable": "error"
-          },
-          "security": {
-            "noBlankTarget": "error",
-            "noDangerouslySetInnerHtmlWithChildren": "error"
-          },
-          "style": {
-            "noCommonJs": "error",
-            "noNamespace": "error",
-            "useArrayLiterals": "error",
-            "useAsConstAssertion": "error"
-          },
-          "suspicious": {
-            "noCommentText": "error",
-            "noDuplicateEnumValues": "error",
-            "noDuplicateJsxProps": "error",
-            "noExplicitAny": "error",
-            "noExtraNonNullAssertion": "error",
-            "noMisleadingInstantiator": "error",
-            "noNonNullAssertedOptionalChain": "error",
-            "noTsIgnore": "error",
-            "noUnknownAttribute": "error",
-            "noUnsafeDeclarationMerging": "error",
-            "noUnusedExpressions": "off",
-            "useNamespaceKeyword": "error"
-          }
-        }
-      }
-    }
-  ],
   "assist": {
     "enabled": true,
     "actions": {
