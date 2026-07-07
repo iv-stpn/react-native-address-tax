@@ -10,6 +10,7 @@
 // to flag that it needs reverification; the ❗ is sticky until a human removes
 // it (typically while setting a new "Last verified" date).
 
+import { readFileSync, writeFileSync } from "node:fs";
 import countries from "../data/countries.json";
 import { level1Admin_CA, level1Admin_US } from "../src/data/level1-administrative-codes";
 import { POSTAL_CODE_DATA } from "../src/data/postal-codes";
@@ -90,7 +91,17 @@ interface Row {
 /** Build all rows (countries, plus per-region rows for regional-tax countries). */
 function buildRows(): Row[] {
   const rows: Row[] = [];
-  for (const c of countries as Array<Record<string, any>>) {
+  type CountryRow = {
+    code: string;
+    name: string;
+    currencyCode?: string;
+    postalCodeRegex?: string | null;
+    administrativeLabels?: {
+      level1?: { en?: string; local?: string } | null;
+      level2?: { en?: string; local?: string } | null;
+    };
+  };
+  for (const c of countries as CountryRow[]) {
     const code: string = c.code;
     const entry = (TAX_CONFIG as Record<string, unknown>)[code];
 
@@ -220,7 +231,7 @@ function renderTable(rows: Row[], prev: Map<string, PrevRow>, dataCols: string[]
 const NOTE = "> ❗ next to a code means its data changed since it was last verified — the country/region should be reverified.";
 
 function main() {
-  let md = require("node:fs").readFileSync(README, "utf8") as string;
+  let md = readFileSync(README, "utf8");
   const rows = buildRows();
 
   let prevBlock = "";
@@ -256,7 +267,7 @@ function main() {
     md = `${md.replace(/\n+$/, "\n")}\n${block}\n`;
   }
 
-  require("node:fs").writeFileSync(README, md);
+  writeFileSync(README, md);
   const flagged = rows.filter(
     (r) => prev.get(r.code)?.hadBang || (!bootstrap && prev.get(r.code)?.signature !== sigOver(r.cells, dataCols)),
   );
