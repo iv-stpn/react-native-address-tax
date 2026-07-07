@@ -7,7 +7,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!**/data", "!!**/dist", "!src/stories/tailwind.css"]
+    "includes": ["**", "!!**/data", "!!**/dist"]
   },
   "formatter": {
     "enabled": true,

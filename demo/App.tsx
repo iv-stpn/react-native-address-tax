@@ -66,7 +66,7 @@ const s = StyleSheet.create({
   btn: { backgroundColor: "#4f46e5", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: "flex-start" },
   btnText: { color: "#ffffff", fontWeight: "600", fontSize: 13 },
 });
-// --- Tax outcome → display category (ported from the old story _utils) -------
+// --- Tax outcome → display category ------------------------------------------
 
 type TaxCategory =
   | "reverse-charge"
@@ -361,7 +361,7 @@ function AddressTaxWrapper({ country, taxType }: { country: string; taxType: Tax
 // ---------------------------------------------------------------------------
 // Custom-styled showcase — drives AddressInput entirely through render props,
 // replacing every default element with a bespoke look. Demonstrates the
-// styling escape hatch that replaced the web version's Tailwind story.
+// styling escape hatch for full visual control.
 // ---------------------------------------------------------------------------
 
 const custom = StyleSheet.create({

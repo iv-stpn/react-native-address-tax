@@ -20,7 +20,7 @@ bun install
 ## Develop
 
 ```bash
-bun run demo         # component playground / stories
+bun run demo         # component playground
 bun run test         # run the test suite (vitest)
 bun run typecheck    # type-check without emitting
 bun run lint         # biome check
