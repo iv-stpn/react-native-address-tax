@@ -32,9 +32,7 @@ const DEFUNCT_COUNTRY_CODES = new Set(["AN", "CS"]);
 // lines starting with "#"; the admin files have no comments.
 async function fetchTsv(file: string): Promise<string[][]> {
   const res = await fetch(`${BASE}/${file}`);
-  if (!res.ok) {
-    throw new Error(`failed to fetch ${file}: ${res.status} ${res.statusText}`);
-  }
+  if (!res.ok) throw new Error(`failed to fetch ${file}: ${res.status} ${res.statusText}`);
   const text = await res.text();
   return text
     .split("\n")
@@ -96,7 +94,7 @@ const sparqlHeaders = {
 // WDQS is flaky under load (502s / timeouts), so retry with backoff.
 async function sparql(query: string): Promise<string[][]> {
   const url = `${WIKIDATA_SPARQL}?query=${encodeURIComponent(query)}`;
-  for (let attempt = 1; ; attempt++) {
+  for (let attempt = 1; ; attempt++)
     try {
       const res = await fetch(url, { headers: sparqlHeaders });
       const text = await res.text();
@@ -112,7 +110,6 @@ async function sparql(query: string): Promise<string[][]> {
       if (attempt >= 3) throw err;
       await wait(500 * 2 ** attempt);
     }
-  }
 }
 
 // One Wikidata query maps every GeoNames id that has an ISO 3166-2 code:
@@ -493,9 +490,7 @@ function isCountryTok(tok: string, nameWords: Set<string>, leading: boolean): bo
       // (Lietuvos<-Lietuva, Slovenska<-Slovenija); >=5 avoids "unitary"<-"united".
       if (f.length > w.length && f.startsWith(w)) return true;
       if (f.length >= 6 && w.length >= 6 && commonPrefix(f, w) >= 5) return true;
-    } else if (f.length >= 4 && w.length >= 4 && commonPrefix(f, w) >= 4) {
-      return true;
-    }
+    } else if (f.length >= 4 && w.length >= 4 && commonPrefix(f, w) >= 4) return true;
   }
   return false;
 }
@@ -551,9 +546,8 @@ function cleanLabel(raw: string | null, names: string[]): string | null {
   }
 
   let kept: string[];
-  if (first === -1) {
-    kept = toks;
-  } else {
+  if (first === -1) kept = toks;
+  else {
     let start = first;
     while (start - 1 >= 0 && CONNECTORS_F.has(fold(toks[start - 1]!))) start--;
     if (start === 0) {
@@ -561,9 +555,7 @@ function cleanLabel(raw: string | null, names: string[]): string | null {
       let j = first;
       while (j < toks.length && (isCountryTok(toks[j]!, nameWords, false) || CONNECTORS_F.has(fold(toks[j]!)))) j++;
       kept = toks.slice(j);
-    } else {
-      kept = toks.slice(0, start);
-    }
+    } else kept = toks.slice(0, start);
   }
   // Trim any dangling leading/trailing connector tokens ("Kanton zu" -> "Kanton").
   while (kept.length > 1 && CONNECTORS_F.has(fold(kept[kept.length - 1]!))) kept = kept.slice(0, -1);
@@ -586,9 +578,7 @@ async function fetchLocalNames(country: string, langs: Set<string>): Promise<Loc
 
   const res = await fetch(`${BASE}/alternatenames/${country}.zip`);
   if (res.status === 404) return result;
-  if (!res.ok) {
-    throw new Error(`failed to fetch alternatenames/${country}.zip: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`failed to fetch alternatenames/${country}.zip: ${res.status}`);
 
   // The per-country archive ships a single "<CC>.txt"; unzip it to stdout.
   const dir = await mkdtemp(join(tmpdir(), "geonames-"));
@@ -720,9 +710,7 @@ async function main() {
     for (const d of level1[country] ?? []) d.localNames = localNames.get(d.geonameId) ?? {};
     for (const d of level2[country] ?? []) d.localNames = localNames.get(d.geonameId) ?? {};
     done++;
-    if (done % 25 === 0 || done === countryCodes.length) {
-      console.log(`localized names: ${done}/${countryCodes.length} countries`);
-    }
+    if (done % 25 === 0 || done === countryCodes.length) console.log(`localized names: ${done}/${countryCodes.length} countries`);
   });
 
   // Division-type labels per country via Wikidata P150 chain: one hop for
@@ -755,9 +743,7 @@ async function main() {
       }
     }
     dt++;
-    if (dt % 25 === 0 || dt === countryCodes.length) {
-      console.log(`division types: ${dt}/${countryCodes.length} countries`);
-    }
+    if (dt % 25 === 0 || dt === countryCodes.length) console.log(`division types: ${dt}/${countryCodes.length} countries`);
   });
 
   const strip = <T extends AdministrativeDivision & { geonameId: string }>(list: T[]): Omit<T, "geonameId">[] =>

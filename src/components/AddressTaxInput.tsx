@@ -226,13 +226,12 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
         hasIdentifier: false,
         ...computeTaxRates(country, addressValue.level1, isBusiness, false, isInNexus),
       });
-    } else {
+    } else
       onTaxChange?.({
         taxId: taxId || undefined,
         hasIdentifier: showTaxFields,
         ...computeTaxRates(country, addressValue.level1, isBusiness, true, isInNexus),
       });
-    }
   }
 
   function handleAddressChange(newAddress: AddressValue) {
@@ -241,13 +240,12 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
     const newInNexus = !nexusList || nexusList.includes(newCountry) || isEUCountry(newCountry);
     const newHasIdentifier = isBusiness && newInNexus && !!newCountry && hasTaxIdentifier;
     const rates = computeTaxRates(newCountry, newAddress.level1, isBusiness, hasTaxIdentifier, newInNexus);
-    if (newHasIdentifier !== hasIdentifier || rates.baseTax !== baseTax || rates.effectiveTax !== effectiveTax) {
+    if (newHasIdentifier !== hasIdentifier || rates.baseTax !== baseTax || rates.effectiveTax !== effectiveTax)
       onTaxChange?.({
         taxId: taxId || undefined,
         hasIdentifier: newHasIdentifier,
         ...rates,
       });
-    }
   }
 
   function handleTaxChange(text: string) {

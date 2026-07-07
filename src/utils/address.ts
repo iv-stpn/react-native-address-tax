@@ -406,12 +406,8 @@ export function resolveAddressField(
     label: required ? baseLabel : `${baseLabel}${OPTIONAL_SUFFIX}`,
     required,
   };
-  if (key === "line1") {
-    field.placeholder = LINE_OVERRIDES[code]?.line1Placeholder ?? LINE1_PLACEHOLDER_DEFAULT;
-  }
-  if (key === "line2") {
-    field.placeholder = LINE_OVERRIDES[code]?.line2Placeholder ?? LINE2_PLACEHOLDER_DEFAULT;
-  }
+  if (key === "line1") field.placeholder = LINE_OVERRIDES[code]?.line1Placeholder ?? LINE1_PLACEHOLDER_DEFAULT;
+  if (key === "line2") field.placeholder = LINE_OVERRIDES[code]?.line2Placeholder ?? LINE2_PLACEHOLDER_DEFAULT;
   if (key === "postalCode") {
     const placeholder = POSTAL_CODE_DATA[code]?.placeholder;
     if (placeholder) field.placeholder = placeholder;

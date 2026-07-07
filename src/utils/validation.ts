@@ -53,20 +53,18 @@ export function validateAddress(value: AddressValueInput, mode: AddressCollectio
   for (const field of fields) {
     if (!isAddressFieldRequired(field, mode)) continue;
     const fieldValue = value[field as keyof AddressValue];
-    if (!fieldValue || String(fieldValue).trim() === "") {
+    if (!fieldValue || String(fieldValue).trim() === "")
       errors.push({
         field,
         message: `${addressFieldLabel(value.country, field)} is required.`,
       });
-    }
   }
 
-  if (value.postalCode && !validatePostalCode(value.postalCode, value.country)) {
+  if (value.postalCode && !validatePostalCode(value.postalCode, value.country))
     errors.push({
       field: "postalCode",
       message: "Invalid postal code format.",
     });
-  }
 
   return { valid: errors.length === 0, errors };
 }
@@ -93,9 +91,7 @@ export function computeEffectiveFields(mode: AddressCollectionMode, country: str
   const allFields = countryConfig.addressFields;
 
   const withLevel1 = (base: AddressFieldKey[], required: boolean): AddressFieldKey[] => {
-    if (required) {
-      return base.includes("level1") ? base : [...base, "level1"];
-    }
+    if (required) return base.includes("level1") ? base : [...base, "level1"];
     return base.filter((f) => f !== "level1");
   };
 

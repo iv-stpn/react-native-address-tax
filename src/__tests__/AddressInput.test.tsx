@@ -92,9 +92,7 @@ describe("AddressInput", () => {
   it("is disabled when disabled prop is set", () => {
     render(<AddressInput value={baseValue} onChange={() => {}} disabled />);
     // RNW maps editable={false} to readOnly on the underlying inputs.
-    for (const input of screen.getAllByRole("textbox")) {
-      expect(input).toHaveAttribute("readonly");
-    }
+    for (const input of screen.getAllByRole("textbox")) expect(input).toHaveAttribute("readonly");
   });
 
   it("accepts custom styles per slot", () => {

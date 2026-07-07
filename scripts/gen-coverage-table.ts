@@ -112,9 +112,8 @@ function buildRows(): Row[] {
     const l2 = levelCell(c.administrativeLabels?.level2);
 
     let tax: string;
-    if (!entry) {
-      tax = "❓";
-    } else if (hasRegionalTax(code)) {
+    if (!entry) tax = "❓";
+    else if (hasRegionalTax(code)) {
       const rates = Object.values(entry as Record<string, { baseConsumerTax: number | null }>)
         .map((r) => r.baseConsumerTax)
         .filter((r): r is number => r != null);
@@ -238,9 +237,8 @@ function main() {
   let bootstrap = false;
   const startsAt = md.indexOf(START);
   const endsAt = md.indexOf(END);
-  if (startsAt >= 0 && endsAt > startsAt) {
-    prevBlock = md.slice(startsAt + START.length, endsAt);
-  } else {
+  if (startsAt >= 0 && endsAt > startsAt) prevBlock = md.slice(startsAt + START.length, endsAt);
+  else {
     // Bootstrap: no markers yet. Capture the legacy table (by its header row)
     // to preserve dates, strip it, and drop the obsolete "Verified" bullet.
     bootstrap = true;
@@ -261,11 +259,8 @@ function main() {
   const table = renderTable(rows, prev, dataCols, bootstrap);
   const block = `${START}\n\n${NOTE}\n\n${table}\n\n${END}`;
 
-  if (startsAt >= 0 && endsAt > startsAt) {
-    md = md.slice(0, startsAt) + block + md.slice(endsAt + END.length);
-  } else {
-    md = `${md.replace(/\n+$/, "\n")}\n${block}\n`;
-  }
+  if (startsAt >= 0 && endsAt > startsAt) md = md.slice(0, startsAt) + block + md.slice(endsAt + END.length);
+  else md = `${md.replace(/\n+$/, "\n")}\n${block}\n`;
 
   writeFileSync(README, md);
   const flagged = rows.filter(

@@ -125,9 +125,7 @@ function flat(rate: number | null, collectionThreshold: number | null): TaxConfi
  */
 function regional(base: Omit<TaxConfig, "baseConsumerTax">, rates: Record<string, number | null>): Record<string, TaxConfig> {
   const out: Record<string, TaxConfig> = {};
-  for (const [code, rate] of Object.entries(rates)) {
-    out[code] = { ...base, baseConsumerTax: rate };
-  }
+  for (const [code, rate] of Object.entries(rates)) out[code] = { ...base, baseConsumerTax: rate };
   return out;
 }
 
