@@ -1,5 +1,5 @@
+import { computeConsumerTaxOutcome, computeTaxOutcome } from "country-data-ts/tax";
 import { describe, expect, it } from "vitest";
-import { computeConsumerTaxOutcome, computeTaxOutcome } from "../utils/tax";
 
 describe("computeTaxOutcome — OSS (EU) always has nexus", () => {
   it("charges the headline rate for EU consumers even without a passed nexus", () => {

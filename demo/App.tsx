@@ -2,20 +2,15 @@
 // A country picker + tab switcher across AddressInput and the three
 // AddressTaxInput tax-type variants, plus a "custom styled" showcase that
 // drives the components entirely through their render props.
+
+import { type AddressCollectionMode, type AddressValue, COUNTRY_LIST, type ValidationMode } from "country-data-ts/address";
+import { computeTaxOutcome, type TaxOutcome, type TaxType, type TaxValue } from "country-data-ts/tax";
 import { useMemo, useRef, useState } from "react";
 import { Pressable, TextInput as RNTextInput, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AddressInput, type AddressInputHandle } from "../src/components/AddressInput";
+import { AddressTaxInput } from "../src/components/AddressTaxInput";
 import { Select } from "../src/components/Select";
-import {
-  type AddressCollectionMode,
-  AddressInput,
-  type AddressInputHandle,
-  AddressTaxInput,
-  type AddressValue,
-  COUNTRY_LIST,
-  type ValidationError,
-  type ValidationMode,
-} from "../src/index";
-import { computeTaxOutcome, type TaxOutcome, type TaxType, type TaxValue } from "../src/utils";
+import type { ValidationError } from "../src/validation";
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#f8fafc" },

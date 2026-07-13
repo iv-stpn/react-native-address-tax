@@ -1,7 +1,14 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/codes.ts", "src/utils.ts"],
+  entry: [
+    "src/components/AddressInput.tsx",
+    "src/components/AddressTaxInput.tsx",
+    "src/components/types.ts",
+    "src/validation.ts",
+    "src/codes.ts",
+    "src/tax.ts",
+  ],
   format: ["cjs", "esm"],
   dts: true,
   sourcemap: false,

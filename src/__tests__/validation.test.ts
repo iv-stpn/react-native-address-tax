@@ -1,13 +1,7 @@
+import type { AddressValue } from "country-data-ts/address";
+import { normalizeTax, validateTax } from "country-data-ts/tax";
 import { describe, expect, it } from "vitest";
-import type { AddressValue } from "../utils/address";
-import {
-  computeEffectiveFields,
-  isValidAddress,
-  normalizeTax,
-  validateAddress,
-  validatePostalCode,
-  validateTax,
-} from "../utils/validation";
+import { computeEffectiveFields, isValidAddress, validateAddress, validatePostalCode } from "../validation";
 
 describe("validateTax", () => {
   it("validates German VAT numbers", () => {
