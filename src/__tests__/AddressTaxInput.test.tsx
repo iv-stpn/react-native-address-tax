@@ -1,10 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AddressValue } from "country-data-ts/address";
 import { type Ref } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AddressInputHandle } from "../components/AddressInput";
 import { AddressTaxInput } from "../components/AddressTaxInput";
-import type { AddressValue } from "../utils/address";
 
 const baseAddress: AddressValue = {
   line1: "123 Main St",

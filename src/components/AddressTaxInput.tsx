@@ -1,10 +1,17 @@
+import type { AddressCollectionMode, AddressValue, ValidationMode } from "country-data-ts/address";
+import { isEUCountry } from "country-data-ts/address";
+import type { TaxType, TaxValue } from "country-data-ts/tax";
+import {
+  computeTaxOutcome,
+  getBusinessTaxNumberLabel,
+  getTaxConfig,
+  hasRegionalTax,
+  normalizeTax,
+  validateTax,
+} from "country-data-ts/tax";
 import { forwardRef, type ReactNode, useEffect, useState } from "react";
 import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
-import type { AddressCollectionMode, AddressValue, ValidationMode } from "../utils/address";
-import type { TaxType, TaxValue } from "../utils/tax";
-import { computeTaxOutcome, getBusinessTaxNumberLabel, getTaxConfig, hasRegionalTax, isEUCountry } from "../utils/tax";
-import type { ValidationError } from "../utils/validation";
-import { normalizeTax, validateTax } from "../utils/validation";
+import type { ValidationError } from "../validation";
 import { AddressInput, type AddressInputHandle } from "./AddressInput";
 import { Checkbox } from "./Checkbox";
 import { defaultStyles } from "./styles";

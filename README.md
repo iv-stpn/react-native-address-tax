@@ -1,5 +1,7 @@
 # react-native-address-tax
 
+[![npm version](https://img.shields.io/npm/v/react-native-address-tax.svg)](https://www.npmjs.com/package/react-native-address-tax)
+
 **[Live demo →](https://iv-stpn.github.io/react-native-address-tax/)**
 
 > [!WARNING] **Work in progress — not production ready.** This project is under
@@ -14,35 +16,85 @@ consumption-tax (VAT/GST/sales tax) computation and business tax-ID validation.
 ## Install
 
 ```bash
-bun install
+npm install react-native-address-tax
+# or: bun add react-native-address-tax
 ```
+
+Peer dependencies: `react` (>=17) and `react-native` (>=0.70). Country, address,
+and tax data comes from [`country-data-ts`](https://www.npmjs.com/package/country-data-ts),
+which installs as a direct dependency.
+
+## Usage
+
+The package ships as per-module subpaths — there is no root entry, so import
+each component from its own path. Types and data helpers are imported directly
+from `country-data-ts`.
+
+```tsx
+import { useState } from "react";
+import { AddressTaxInput } from "react-native-address-tax/AddressTaxInput";
+import type { AddressValue } from "country-data-ts/address";
+import type { TaxValue } from "country-data-ts/tax";
+
+export function Checkout() {
+  const [address, setAddress] = useState<AddressValue>({
+    line1: "", line2: "", city: "", level1: "", postalCode: "", country: "",
+  });
+
+  return (
+    <AddressTaxInput
+      addressValue={address}
+      onAddressChange={setAddress}
+      onTaxChange={(tax: TaxValue) => console.log(tax.effectiveTax)}
+    />
+  );
+}
+```
+
+For a bare address form without tax fields, use `AddressInput`:
+
+```tsx
+import { AddressInput } from "react-native-address-tax/AddressInput";
+```
+
+### Exports
+
+| Subpath | Contents |
+| --- | --- |
+| `react-native-address-tax/AddressInput` | `AddressInput`, `AddressInputHandle`, `AddressInputProps` |
+| `react-native-address-tax/AddressTaxInput` | `AddressTaxInput`, `AddressTaxInputProps` |
+| `react-native-address-tax/types` | Render-prop types (`RenderInputProps`, `RenderSelectProps`, `RenderCheckboxProps`, `RenderContainerProps`, `RenderFieldEntry`, `AddressInputStyles`) |
+| `react-native-address-tax/validation` | `validateAddress`, `isValidAddress`, `validatePostalCode`, `computeEffectiveFields`, `ValidationError`, `ValidationResult` |
+| `react-native-address-tax/tax` | Re-exposes `country-data-ts/tax` — tax types, rate computation (`computeTaxOutcome`, `computeConsumerTaxOutcome`), label helpers, `validateTax`, `normalizeTax`, … |
+| `react-native-address-tax/codes` | Re-exposes `country-data-ts/countries` — `COUNTRY_CODES`, `COUNTRY_DATA`, `CountryCode`, … |
+
+Address types and address helpers (`AddressValue`, `COUNTRY_LIST`,
+`getCountryConfig`, …) are imported directly from `country-data-ts/address`. Tax
+and country-code symbols are available either from this package's `/tax` and
+`/codes` subpaths or directly from `country-data-ts/tax` / `country-data-ts/countries`.
 
 ## Develop
 
 ```bash
-bun run demo         # component playground / stories
+bun run demo         # component playground
 bun run test         # run the test suite (vitest)
 bun run typecheck    # type-check without emitting
 bun run lint         # biome check
 bun run build        # bundle with tsup
 ```
 
-## Data generation
+## Data
 
-The reference data under `data/*.json` and the derived TypeScript in
-`src/data/*` are generated from GeoNames, Wikidata, and curated tax tables. Do
-not hand-edit the generated files — regenerate them instead:
-
-```bash
-bun run gen:geonames   # data/*.json from GeoNames + Wikidata
-bun run gen:level1     # src/data/level1-administrative-codes.ts
-bun run gen:countries  # src/data/countries.ts (COUNTRY_DATA, codes)
-```
+Country, address-format, administrative-division, and tax data is sourced from
+[`country-data-ts`](https://www.npmjs.com/package/country-data-ts) (generated
+from GeoNames, Wikidata, and curated tax tables). This package layers the React
+Native input components and address/tax validation on top of that data.
 
 ## Country coverage
 
-The table below summarizes per-country support. It is generated from the project
-data and is a starting point for manual verification.
+The table below summarizes per-country support. It is generated from the
+underlying `country-data-ts` data and is a starting point for manual
+verification.
 
 Legend:
 
@@ -70,9 +122,7 @@ Columns:
 
 Regional-tax countries (US, CA) list each state/province as a separate
 `CC-REGION` row (e.g. `US-VA`) with its own rate; `↳` means the value is
-inherited from the country row above. Regenerate the table with
-`bun run
-gen:coverage`.
+inherited from the country row above.
 
 <!-- COVERAGE_TABLE_START -->
 

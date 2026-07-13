@@ -7,7 +7,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!**/data", "!!**/dist", "!src/stories/tailwind.css"]
+    "includes": ["**", "!!**/dist"]
   },
   "formatter": {
     "enabled": true,
@@ -56,7 +56,7 @@
         "useNamespaceKeyword": "error"
       }
     },
-    "includes": ["**", "!data/**", "!dist/**", "!node_modules/**"]
+    "includes": ["**", "!dist/**", "!node_modules/**"]
   },
   "javascript": {
     "formatter": {

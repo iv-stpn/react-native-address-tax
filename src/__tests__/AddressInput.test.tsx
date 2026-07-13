@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AddressValue, ValidationMode } from "country-data-ts/address";
 import { createRef, type Ref, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AddressInput, type AddressInputHandle } from "../components/AddressInput";
-import type { AddressValue, ValidationMode } from "../utils/address";
 
 const baseValue: AddressValue = {
   line1: "123 Main St",

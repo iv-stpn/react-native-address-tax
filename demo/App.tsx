@@ -2,20 +2,15 @@
 // A country picker + tab switcher across AddressInput and the three
 // AddressTaxInput tax-type variants, plus a "custom styled" showcase that
 // drives the components entirely through their render props.
+
+import { type AddressCollectionMode, type AddressValue, COUNTRY_LIST, type ValidationMode } from "country-data-ts/address";
+import { computeTaxOutcome, type TaxOutcome, type TaxType, type TaxValue } from "country-data-ts/tax";
 import { useMemo, useRef, useState } from "react";
 import { Pressable, TextInput as RNTextInput, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AddressInput, type AddressInputHandle } from "../src/components/AddressInput";
+import { AddressTaxInput } from "../src/components/AddressTaxInput";
 import { Select } from "../src/components/Select";
-import {
-  type AddressCollectionMode,
-  AddressInput,
-  type AddressInputHandle,
-  AddressTaxInput,
-  type AddressValue,
-  COUNTRY_LIST,
-  type ValidationError,
-  type ValidationMode,
-} from "../src/index";
-import { computeTaxOutcome, type TaxOutcome, type TaxType, type TaxValue } from "../src/utils";
+import type { ValidationError } from "../src/validation";
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#f8fafc" },
@@ -66,7 +61,7 @@ const s = StyleSheet.create({
   btn: { backgroundColor: "#4f46e5", borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14, alignSelf: "flex-start" },
   btnText: { color: "#ffffff", fontWeight: "600", fontSize: 13 },
 });
-// --- Tax outcome → display category (ported from the old story _utils) -------
+// --- Tax outcome → display category ------------------------------------------
 
 type TaxCategory =
   | "reverse-charge"
@@ -361,7 +356,7 @@ function AddressTaxWrapper({ country, taxType }: { country: string; taxType: Tax
 // ---------------------------------------------------------------------------
 // Custom-styled showcase — drives AddressInput entirely through render props,
 // replacing every default element with a bespoke look. Demonstrates the
-// styling escape hatch that replaced the web version's Tailwind story.
+// styling escape hatch for full visual control.
 // ---------------------------------------------------------------------------
 
 const custom = StyleSheet.create({
