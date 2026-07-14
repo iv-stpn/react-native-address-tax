@@ -1,23 +1,16 @@
-import type { AddressCollectionMode, AddressValue, ValidationMode } from "country-data-ts/address";
-import { isEUCountry } from "country-data-ts/address";
-import type { TaxType, TaxValue } from "country-data-ts/tax";
-import {
-  computeTaxOutcome,
-  getBusinessTaxNumberLabel,
-  getTaxConfig,
-  hasRegionalTax,
-  normalizeTax,
-  validateTax,
-} from "country-data-ts/tax";
-import { forwardRef, type ReactNode, useEffect, useState } from "react";
-import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
-import type { ValidationError } from "../validation";
-import { AddressInput, type AddressInputHandle } from "./AddressInput";
-import { Checkbox } from "./Checkbox";
-import { defaultStyles } from "./styles";
-import type { RenderCheckboxProps, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "./types";
+import type { AddressCollectionMode, AddressValue, ValidationMode } from 'country-data-ts/address';
+import type { TaxType, TaxValue } from 'country-data-ts/tax';
+import { hasRegionalTax } from 'country-data-ts/tax';
+import type { ReactNode } from 'react';
+import { View } from 'react-native';
+import type { ValidationError } from '../validation';
+import { AddressInput } from './AddressInput';
+import { buildTaxNodes } from './addressTaxFields';
+import { defaultStyles } from './styles';
+import type { RenderCheckboxProps, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from './types';
+import { useAddressTaxState } from './useAddressTaxState';
 
-export interface AddressTaxInputProps {
+export type AddressTaxInputProps = {
   addressValue: AddressValue;
   /**
    * Whether the payer is always a business, always an individual, or lets the user either.
@@ -61,7 +54,7 @@ export interface AddressTaxInputProps {
   level1AdministrativePlaceholder?: (label: string) => string;
   disabled?: boolean;
   /** Style applied to the root View. */
-  style?: RenderContainerProps["style"];
+  style?: RenderContainerProps['style'];
   renderInput?: (props: RenderInputProps) => ReactNode;
   renderCheckbox?: (props: RenderCheckboxProps) => ReactNode;
   /** Custom renderer for the country selector. */
@@ -81,313 +74,56 @@ export interface AddressTaxInputProps {
    * "taxId" for the tax identifier input.
    */
   renderFields?: (fields: RenderFieldEntry[]) => ReactNode;
-}
+  ref?: React.Ref<import('./AddressInput').AddressInputHandle>;
+};
 
-/**
- * Resolve the two tax-rate states for a given buyer/jurisdiction:
- * - `baseTax`: the rate that would apply if the seller had a nexus here (the
- *   headline rate for the buyer, accounting for B2B reverse charge).
- * - `effectiveTax`: `baseTax` when the seller actually has a nexus, else 0.
- *
- * The rate is computed under the hypothetical "seller has nexus" assumption, so
- * `hasTaxIdentifier` only gates the reverse-charge treatment — not collection.
- */
-function computeTaxRates(
-  country: string,
-  level1: string | undefined,
-  isBusiness: boolean,
-  hasTaxIdentifier: boolean,
-  isInNexus: boolean,
-): { baseTax: number; effectiveTax: number; taxLabel: string | null; localTaxLabel: string | null } {
-  const outcome = computeTaxOutcome({
-    country,
-    isBusiness,
-    hasTaxId: isBusiness && hasTaxIdentifier,
-    hasNexus: isInNexus,
-    state: level1,
-  });
-  return {
-    baseTax: outcome.baseTax ?? 0,
-    effectiveTax: outcome.effectiveTax ?? 0,
-    taxLabel: outcome.taxLabel,
-    localTaxLabel: outcome.localTaxLabel,
-  };
-}
+export const AddressTaxInput = function AddressTaxInput(props: AddressTaxInputProps) {
+  const { addressValue, taxType = 'either', nexusList, taxRequired = false, mode, validationMode } = props;
+  const { defaultCountry, defaultRegion, countryPlaceholder, level1AdministrativePlaceholder, disabled = false } = props;
+  const { style, renderInput, renderCheckbox, renderCountrySelect, renderLevel1AdministrativeSelect } = props;
+  const { renderContainer, renderFields, onValidationChange, ref } = props;
 
-export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputProps>(function AddressTaxInput(
-  {
+  const state = useAddressTaxState({
     addressValue,
-    taxType = "either",
-    isBusiness: isBusinessProp,
-    hasTaxIdentifier: hasTaxIdentifierProp,
-    taxIdentifier: taxIdentifierProp,
+    taxType,
+    isBusinessProp: props.isBusiness,
+    hasTaxIdentifierProp: props.hasTaxIdentifier,
+    taxIdentifierProp: props.taxIdentifier,
     nexusList,
-    taxRequired = false,
-    onAddressChange,
-    onTaxChange,
-    onBusinessChange,
-    onHasTaxIdentifierChange,
-    onTaxIdentifierChange,
-    onValidationChange,
-    mode,
-    validationMode,
     defaultCountry,
-    defaultRegion,
-    countryPlaceholder,
-    level1AdministrativePlaceholder,
-    disabled = false,
-    style,
-    renderInput,
+    callbacks: {
+      onAddressChange: props.onAddressChange,
+      onTaxChange: props.onTaxChange,
+      onBusinessChange: props.onBusinessChange,
+      onHasTaxIdentifierChange: props.onHasTaxIdentifierChange,
+      onTaxIdentifierChange: props.onTaxIdentifierChange,
+    },
+  });
+
+  const { businessCheckboxNode, noTaxIdentifierNode, taxIdNode, beforeEntries, afterEntries } = buildTaxNodes({
+    taxType,
+    isBusiness: state.isBusiness,
+    hasTaxIdentifier: state.hasTaxIdentifier,
+    showTaxFields: state.showTaxFields,
+    disabled,
+    taxRequired,
+    businessTaxNumberLabel: state.businessTaxNumberLabel,
+    taxId: state.taxId,
+    taxExample: state.taxConfig?.taxExample,
+    taxError: state.taxError,
+    taxInvalid: state.taxInvalid,
+    handleBusinessChange: state.handleBusinessChange,
+    handleHasTaxIdentifierChange: state.handleHasTaxIdentifierChange,
+    handleTaxChange: state.handleTaxChange,
+    handleTaxBlur: state.handleTaxBlur,
     renderCheckbox,
-    renderCountrySelect,
-    renderLevel1AdministrativeSelect,
+    renderInput,
     renderContainer,
-    renderFields,
-  }: AddressTaxInputProps,
-  ref,
-) {
-  const [internalIsBusiness, setInternalIsBusiness] = useState(false);
-  const [internalHasTaxIdentifier, setInternalHasTaxIdentifier] = useState(true);
-  const [internalTaxIdentifier, setInternalTaxIdentifier] = useState("");
-  const [taxTouched, setTaxTouched] = useState(false);
+  });
 
-  const isBusiness =
-    taxType === "business"
-      ? true
-      : taxType === "individual"
-        ? false
-        : isBusinessProp !== undefined
-          ? isBusinessProp
-          : internalIsBusiness;
-  const hasTaxIdentifier = hasTaxIdentifierProp !== undefined ? hasTaxIdentifierProp : internalHasTaxIdentifier;
-  const taxId = taxIdentifierProp !== undefined ? taxIdentifierProp : internalTaxIdentifier;
-  const setTaxId = (value: string) => {
-    setInternalTaxIdentifier(value);
-    onTaxIdentifierChange?.(value);
-  };
-
-  const country = addressValue.country || defaultCountry || "";
-  const taxConfig = getTaxConfig(country);
-  // EU member states always carry a consumption-tax obligation, so they count
-  // as in-nexus even when the nexus list is empty or omits them.
-  const isInNexus = !nexusList || nexusList.includes(country) || isEUCountry(country);
-  const showTaxFields = isBusiness && isInNexus && !!country;
-
-  const businessTaxNumberLabel = (country ? getBusinessTaxNumberLabel(country) : null) ?? "Tax ID";
-
-  const hasIdentifier = showTaxFields && hasTaxIdentifier;
-
-  const { baseTax, effectiveTax, taxLabel, localTaxLabel } = computeTaxRates(
-    country,
-    addressValue.level1,
-    isBusiness,
-    hasTaxIdentifier,
-    isInNexus,
-  );
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only — emit initial computed state; handlers cover subsequent changes
-  useEffect(() => {
-    onTaxChange?.({
-      taxId: taxId || undefined,
-      hasIdentifier,
-      baseTax,
-      effectiveTax,
-      taxLabel,
-      localTaxLabel,
-    });
-  }, []);
-
-  const taxInvalid = taxTouched && !!taxId ? !validateTax(taxId, country) : false;
-  const taxError = taxInvalid ? `Invalid ${businessTaxNumberLabel} format. Expected: ${taxConfig?.taxExample ?? ""}.` : undefined;
-
-  function handleBusinessChange(val: boolean) {
-    setInternalIsBusiness(val);
-    onBusinessChange?.(val);
-    if (!val) {
-      setInternalHasTaxIdentifier(true);
-      onHasTaxIdentifierChange?.(true);
-      onTaxChange?.({
-        taxId: taxId || undefined,
-        hasIdentifier: false,
-        ...computeTaxRates(country, addressValue.level1, false, hasTaxIdentifier, isInNexus),
-      });
-    } else {
-      const newHasIdentifier = isInNexus && !!country && hasTaxIdentifier;
-      onTaxChange?.({
-        taxId: taxId || undefined,
-        hasIdentifier: newHasIdentifier,
-        ...computeTaxRates(country, addressValue.level1, true, hasTaxIdentifier, isInNexus),
-      });
-    }
-  }
-
-  function handleHasTaxIdentifierChange(checked: boolean) {
-    // The checkbox is "I don't have a …", so its checked state is the inverse.
-    const val = !checked;
-    setInternalHasTaxIdentifier(val);
-    onHasTaxIdentifierChange?.(val);
-    if (!val) {
-      setTaxId("");
-      onTaxChange?.({
-        taxId: undefined,
-        hasIdentifier: false,
-        ...computeTaxRates(country, addressValue.level1, isBusiness, false, isInNexus),
-      });
-    } else
-      onTaxChange?.({
-        taxId: taxId || undefined,
-        hasIdentifier: showTaxFields,
-        ...computeTaxRates(country, addressValue.level1, isBusiness, true, isInNexus),
-      });
-  }
-
-  function handleAddressChange(newAddress: AddressValue) {
-    onAddressChange(newAddress);
-    const newCountry = newAddress.country || defaultCountry || "";
-    const newInNexus = !nexusList || nexusList.includes(newCountry) || isEUCountry(newCountry);
-    const newHasIdentifier = isBusiness && newInNexus && !!newCountry && hasTaxIdentifier;
-    const rates = computeTaxRates(newCountry, newAddress.level1, isBusiness, hasTaxIdentifier, newInNexus);
-    if (newHasIdentifier !== hasIdentifier || rates.baseTax !== baseTax || rates.effectiveTax !== effectiveTax)
-      onTaxChange?.({
-        taxId: taxId || undefined,
-        hasIdentifier: newHasIdentifier,
-        ...rates,
-      });
-  }
-
-  function handleTaxChange(text: string) {
-    setTaxId(text);
-    onTaxChange?.({
-      taxId: text || undefined,
-      hasIdentifier,
-      baseTax,
-      effectiveTax,
-      taxLabel,
-      localTaxLabel,
-    });
-    setTaxTouched(true);
-  }
-
-  function handleTaxBlur() {
-    const normalized = normalizeTax(taxId);
-    if (normalized !== taxId) {
-      setTaxId(normalized);
-      onTaxChange?.({
-        taxId: normalized || undefined,
-        hasIdentifier,
-        baseTax,
-        effectiveTax,
-        taxLabel,
-        localTaxLabel,
-      });
-    }
-    setTaxTouched(true);
-  }
-
-  // --- Default render helpers ---
-
-  function renderCheckboxEl(props: RenderCheckboxProps) {
-    if (renderCheckbox) return renderCheckbox(props);
-    return <Checkbox {...props} />;
-  }
-
-  function renderInputEl(props: RenderInputProps) {
-    if (renderInput) return renderInput(props);
-    const inputStyle: StyleProp<TextStyle> = [
-      defaultStyles.input,
-      props.invalid && defaultStyles.inputInvalid,
-      props.disabled && defaultStyles.inputDisabled,
-      props.style,
-    ];
-    return (
-      <TextInput
-        testID={props.id}
-        nativeID={props.id}
-        style={inputStyle}
-        value={props.value}
-        onChangeText={props.onChangeText}
-        onBlur={props.onBlur}
-        placeholder={props.placeholder}
-        placeholderTextColor="#94a3b8"
-        editable={!props.disabled}
-        accessibilityLabel={props.accessibilityLabel}
-        aria-label={props.accessibilityLabel}
-        aria-required={props.required}
-        aria-invalid={props.invalid}
-      />
-    );
-  }
-
-  function renderContainerEl(containerProps: RenderContainerProps) {
-    if (renderContainer) return renderContainer(containerProps);
-    return (
-      <View style={[defaultStyles.field, containerProps.style]}>
-        <Text nativeID={`${containerProps.id}-label`} style={defaultStyles.label}>
-          {containerProps.label}
-          {containerProps.required ? <Text style={defaultStyles.required}> *</Text> : null}
-        </Text>
-        {containerProps.children}
-        {containerProps.error ? (
-          <Text testID={`${containerProps.id}-error`} role="alert" style={defaultStyles.error}>
-            {containerProps.error}
-          </Text>
-        ) : null}
-      </View>
-    );
-  }
-
-  const taxInputId = "rav-taxId";
-
-  const businessCheckboxNode =
-    taxType === "either" ? (
-      <View style={defaultStyles.field}>
-        {renderCheckboxEl({
-          checked: isBusiness,
-          onValueChange: handleBusinessChange,
-          disabled,
-          label: "Business account",
-        })}
-      </View>
-    ) : null;
-
-  const noTaxIdentifierNode = showTaxFields ? (
-    <View style={defaultStyles.field}>
-      {renderCheckboxEl({
-        checked: !hasTaxIdentifier,
-        onValueChange: handleHasTaxIdentifierChange,
-        disabled,
-        label: `I don't have a ${businessTaxNumberLabel}`,
-      })}
-    </View>
-  ) : null;
-
-  const taxIdNode =
-    showTaxFields && hasTaxIdentifier
-      ? renderContainerEl({
-          id: taxInputId,
-          fieldKey: "taxId",
-          label: businessTaxNumberLabel,
-          required: taxRequired,
-          error: taxError,
-          children: renderInputEl({
-            id: taxInputId,
-            value: taxId,
-            onChangeText: handleTaxChange,
-            onBlur: handleTaxBlur,
-            placeholder: taxConfig?.taxExample,
-            disabled,
-            required: taxRequired,
-            invalid: taxInvalid,
-            accessibilityLabel: businessTaxNumberLabel,
-          }),
-        })
-      : null;
-
-  // Entries that bracket the address fields, in display order.
-  const beforeEntries: RenderFieldEntry[] = businessCheckboxNode ? [{ type: "business", node: businessCheckboxNode }] : [];
-  const afterEntries: RenderFieldEntry[] = [];
-  if (noTaxIdentifierNode) afterEntries.push({ type: "noTaxIdentifier", node: noTaxIdentifierNode });
-  if (taxIdNode) afterEntries.push({ type: "taxId", node: taxIdNode });
+  // Regional-tax countries (US, CA) force level-1 selection, so bump the mode to
+  // "fullRegion" unless the caller explicitly asked for region-only collection.
+  const effectiveMode = hasRegionalTax(state.country) && mode !== 'region' ? 'fullRegion' : mode;
 
   return (
     <View style={[defaultStyles.root, style]}>
@@ -396,11 +132,11 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
       <AddressInput
         ref={ref}
         value={addressValue}
-        onChange={handleAddressChange}
+        onChange={state.handleAddressChange}
         onValidationChange={onValidationChange}
-        mode={hasRegionalTax(country) && mode !== "region" ? "fullRegion" : mode}
+        mode={effectiveMode}
         validationMode={validationMode}
-        inline
+        inline={true}
         defaultCountry={defaultCountry}
         defaultRegion={defaultRegion}
         countryPlaceholder={countryPlaceholder}
@@ -415,7 +151,7 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
         }
       />
 
-      {!renderFields && showTaxFields ? (
+      {!renderFields && state.showTaxFields ? (
         <>
           {noTaxIdentifierNode}
           {taxIdNode}
@@ -423,4 +159,4 @@ export const AddressTaxInput = forwardRef<AddressInputHandle, AddressTaxInputPro
       ) : null}
     </View>
   );
-});
+};

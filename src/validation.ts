@@ -7,19 +7,19 @@ import {
   getCountryConfig,
   isAddressFieldRequired,
   isEUCountry,
-} from "country-data-ts/address";
-import { COUNTRY_DATA, type CountryCode } from "country-data-ts/countries";
-import { getTaxConfig, hasRegionalTax } from "country-data-ts/tax";
+} from 'country-data-ts/address';
+import { isCountryCode } from 'country-data-ts/countries';
+import { hasRegionalTax } from 'country-data-ts/tax';
 
-export interface ValidationError {
+export type ValidationError = {
   field: string;
   message: string;
-}
+};
 
-export interface ValidationResult {
+export type ValidationResult = {
   valid: boolean;
   errors: ValidationError[];
-}
+};
 
 export function validatePostalCode(postalCode: string, countryCode: string): boolean {
   const config = getCountryConfig(countryCode);
@@ -27,7 +27,7 @@ export function validatePostalCode(postalCode: string, countryCode: string): boo
   return config.postalCodePattern.test(postalCode.trim());
 }
 
-export function validateAddress(value: AddressValueInput, mode: AddressCollectionMode = "full"): ValidationResult {
+export function validateAddress(value: AddressValueInput, mode: AddressCollectionMode = 'full'): ValidationResult {
   const errors: ValidationError[] = [];
   const config = getCountryConfig(value.country);
 
@@ -35,10 +35,10 @@ export function validateAddress(value: AddressValueInput, mode: AddressCollectio
   // without a detailed address config are still valid — only the country is
   // collected for them — so we don't require a config here.
   const countryCode = value.country.trim().toUpperCase();
-  if (!countryCode || !COUNTRY_DATA[countryCode as CountryCode]) {
+  if (!isCountryCode(countryCode)) {
     errors.push({
-      field: "country",
-      message: "Please select a country.",
+      field: 'country',
+      message: 'Please select a country.',
     });
     return { valid: false, errors };
   }
@@ -52,19 +52,20 @@ export function validateAddress(value: AddressValueInput, mode: AddressCollectio
   const fields = computeEffectiveFields(mode, value.country);
 
   for (const field of fields) {
-    if (!isAddressFieldRequired(field, mode)) continue;
-    const fieldValue = value[field as keyof AddressValue];
-    if (!fieldValue || String(fieldValue).trim() === "")
-      errors.push({
-        field,
-        message: `${addressFieldLabel(value.country, field)} is required.`,
-      });
+    if (isAddressFieldRequired(field, mode)) {
+      const fieldValue = value[field];
+      if (!fieldValue || String(fieldValue).trim() === '')
+        errors.push({
+          field,
+          message: `${addressFieldLabel(value.country, field)} is required.`,
+        });
+    }
   }
 
   if (value.postalCode && !validatePostalCode(value.postalCode, value.country))
     errors.push({
-      field: "postalCode",
-      message: "Invalid postal code format.",
+      field: 'postalCode',
+      message: 'Invalid postal code format.',
     });
 
   return { valid: errors.length === 0, errors };
@@ -88,26 +89,26 @@ export function validateAddress(value: AddressValueInput, mode: AddressCollectio
  */
 export function computeEffectiveFields(mode: AddressCollectionMode, country: string): AddressFieldKey[] {
   const countryConfig = getCountryConfig(country);
-  if (!country || !countryConfig) return [];
+  if (!(country && countryConfig)) return [];
   const allFields = countryConfig.addressFields;
 
   const withLevel1 = (base: AddressFieldKey[], required: boolean): AddressFieldKey[] => {
-    if (required) return base.includes("level1") ? base : [...base, "level1"];
-    return base.filter((f) => f !== "level1");
+    if (required) return base.includes('level1') ? base : [...base, 'level1'];
+    return base.filter((f) => f !== 'level1');
   };
 
   switch (mode) {
-    case "full":
-      return allFields.filter((f) => f !== "level1");
-    case "fullRegion":
+    case 'full':
+      return allFields.filter((f) => f !== 'level1');
+    case 'fullRegion':
       return withLevel1(allFields, true);
-    case "region":
-      return ["level1"];
-    case "regionMinimal":
-      return isEUCountry(country) ? allFields.filter((f) => f !== "level1") : ["level1"];
+    case 'region':
+      return ['level1'];
+    case 'regionMinimal':
+      return isEUCountry(country) ? allFields.filter((f) => f !== 'level1') : ['level1'];
     default: // "minimal"
-      if (isEUCountry(country)) return allFields.filter((f) => f !== "level1");
-      if (hasRegionalTax(country)) return ["level1"];
+      if (isEUCountry(country)) return allFields.filter((f) => f !== 'level1');
+      if (hasRegionalTax(country)) return ['level1'];
       return [];
   }
 }
@@ -122,15 +123,15 @@ export function computeEffectiveFields(mode: AddressCollectionMode, country: str
  * default to empty.
  */
 export function isValidAddress(
-  value: Partial<AddressValue> & Pick<AddressValue, "country">,
-  mode: AddressCollectionMode = "full",
+  value: Partial<AddressValue> & Pick<AddressValue, 'country'>,
+  mode: AddressCollectionMode = 'full',
 ): boolean {
   const full: AddressValue = {
-    line1: value.line1 ?? "",
+    line1: value.line1 ?? '',
     line2: value.line2,
-    city: value.city ?? "",
+    city: value.city ?? '',
     level1: value.level1,
-    postalCode: value.postalCode ?? "",
+    postalCode: value.postalCode ?? '',
     country: value.country,
   };
   return validateAddress(full, mode).valid;
