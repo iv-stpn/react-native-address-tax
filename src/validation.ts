@@ -11,6 +11,8 @@ import {
 import { isCountryCode } from 'country-data-ts/countries';
 import { hasRegionalTax } from 'country-data-ts/tax';
 
+export type { AddressValue } from 'country-data-ts/address';
+
 export type ValidationError = {
   field: string;
   message: string;
