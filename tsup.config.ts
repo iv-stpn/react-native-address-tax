@@ -10,7 +10,10 @@ export default defineConfig({
     'src/tax.ts',
   ],
   format: ['cjs', 'esm'],
-  dts: true,
+  // Declarations are emitted by `tsc --emitDeclarationOnly` (see the build
+  // script). tsup's rollup-plugin-dts is incompatible with the TypeScript 7
+  // native compiler API, so we let tsc own .d.ts generation.
+  dts: false,
   sourcemap: false,
   clean: true,
   external: ['react', 'react-dom', 'react-native', 'react-native-web'],

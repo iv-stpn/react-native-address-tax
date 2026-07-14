@@ -21,64 +21,34 @@
   "type": "module",
   "exports": {
     "./AddressInput": {
-      "import": {
-        "types": "./dist/components/AddressInput.d.ts",
-        "default": "./dist/components/AddressInput.js"
-      },
-      "require": {
-        "types": "./dist/components/AddressInput.d.cts",
-        "default": "./dist/components/AddressInput.cjs"
-      }
+      "types": "./dist/components/AddressInput.d.ts",
+      "import": "./dist/components/AddressInput.js",
+      "require": "./dist/components/AddressInput.cjs"
     },
     "./AddressTaxInput": {
-      "import": {
-        "types": "./dist/components/AddressTaxInput.d.ts",
-        "default": "./dist/components/AddressTaxInput.js"
-      },
-      "require": {
-        "types": "./dist/components/AddressTaxInput.d.cts",
-        "default": "./dist/components/AddressTaxInput.cjs"
-      }
+      "types": "./dist/components/AddressTaxInput.d.ts",
+      "import": "./dist/components/AddressTaxInput.js",
+      "require": "./dist/components/AddressTaxInput.cjs"
     },
     "./types": {
-      "import": {
-        "types": "./dist/components/types.d.ts",
-        "default": "./dist/components/types.js"
-      },
-      "require": {
-        "types": "./dist/components/types.d.cts",
-        "default": "./dist/components/types.cjs"
-      }
+      "types": "./dist/components/types.d.ts",
+      "import": "./dist/components/types.js",
+      "require": "./dist/components/types.cjs"
     },
     "./validation": {
-      "import": {
-        "types": "./dist/validation.d.ts",
-        "default": "./dist/validation.js"
-      },
-      "require": {
-        "types": "./dist/validation.d.cts",
-        "default": "./dist/validation.cjs"
-      }
+      "types": "./dist/validation.d.ts",
+      "import": "./dist/validation.js",
+      "require": "./dist/validation.cjs"
     },
     "./codes": {
-      "import": {
-        "types": "./dist/codes.d.ts",
-        "default": "./dist/codes.js"
-      },
-      "require": {
-        "types": "./dist/codes.d.cts",
-        "default": "./dist/codes.cjs"
-      }
+      "types": "./dist/codes.d.ts",
+      "import": "./dist/codes.js",
+      "require": "./dist/codes.cjs"
     },
     "./tax": {
-      "import": {
-        "types": "./dist/tax.d.ts",
-        "default": "./dist/tax.js"
-      },
-      "require": {
-        "types": "./dist/tax.d.cts",
-        "default": "./dist/tax.cjs"
-      }
+      "types": "./dist/tax.d.ts",
+      "import": "./dist/tax.js",
+      "require": "./dist/tax.cjs"
     }
   },
   "files": [
@@ -86,7 +56,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc --emitDeclarationOnly --declarationMap false",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
