@@ -1,6 +1,10 @@
-import { Pressable, Text, View } from "react-native";
-import { defaultStyles } from "./styles";
-import type { RenderCheckboxProps } from "./types";
+import { useCallback } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { defaultStyles } from './styles';
+import type { RenderCheckboxProps } from './types';
+
+// The checkmark glyph shown when the box is on, hoisted out of JSX.
+const CHECK_MARK = '✓';
 
 // Dependency-free checkbox: a Pressable box that shows a checkmark when on.
 // Carries `role="checkbox"` + `aria-checked` and mirrors its label into
@@ -8,6 +12,9 @@ import type { RenderCheckboxProps } from "./types";
 // <input type="checkbox"> did.
 export function Checkbox(props: RenderCheckboxProps) {
   const { id, checked, onValueChange, disabled, label, style } = props;
+  const handlePress = useCallback(() => {
+    if (!disabled) onValueChange(!checked);
+  }, [disabled, onValueChange, checked]);
   return (
     <Pressable
       testID={id}
@@ -18,11 +25,11 @@ export function Checkbox(props: RenderCheckboxProps) {
       accessibilityLabel={label}
       aria-disabled={disabled}
       disabled={disabled}
-      onPress={() => !disabled && onValueChange(!checked)}
+      onPress={handlePress}
       style={[defaultStyles.checkbox, style]}
     >
       <View style={[defaultStyles.checkboxBox, checked && defaultStyles.checkboxBoxChecked]}>
-        {checked ? <Text style={defaultStyles.checkboxCheck}>✓</Text> : null}
+        {checked ? <Text style={defaultStyles.checkboxCheck}>{CHECK_MARK}</Text> : null}
       </View>
       <Text style={defaultStyles.checkboxLabel}>{label}</Text>
     </Pressable>

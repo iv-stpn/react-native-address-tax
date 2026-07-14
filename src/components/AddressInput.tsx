@@ -1,24 +1,24 @@
-import type { AddressCollectionMode, AddressValue, ValidationMode } from "country-data-ts/address";
-import { ALL_COUNTRY_OPTIONS, getCountryConfig, resolveAddressField } from "country-data-ts/address";
-import { Fragment, forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { type StyleProp, Text, TextInput, type TextStyle, View } from "react-native";
-import type { ValidationError, ValidationResult } from "../validation";
-import { computeEffectiveFields, validateAddress } from "../validation";
-import { Select } from "./Select";
-import { defaultStyles } from "./styles";
-import type { AddressInputStyles, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from "./types";
+import type { AddressCollectionMode, AddressValue, ValidationMode } from 'country-data-ts/address';
+import { Fragment, type ReactNode, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { View } from 'react-native';
+import type { ValidationError, ValidationResult } from '../validation';
+import { computeEffectiveFields, validateAddress } from '../validation';
+import { buildFieldEntries, EMPTY_VALUE } from './addressInputFields';
+import { useReactiveEffect } from './hooks';
+import { defaultStyles } from './styles';
+import type { AddressInputStyles, RenderContainerProps, RenderFieldEntry, RenderInputProps, RenderSelectProps } from './types';
 
 /** Imperative handle exposed via ref, primarily for the "onSubmit" validation mode. */
-export interface AddressInputHandle {
+export type AddressInputHandle = {
   /**
    * Marks every collected field as touched (revealing any pending errors) and
    * returns the current validation result. Call this from a form's submit
    * handler when using `validationMode="onSubmit"`.
    */
   validate: () => ValidationResult;
-}
+};
 
-export interface AddressInputProps {
+export type AddressInputProps = {
   value: AddressValue;
   onChange: (value: AddressValue) => void;
   onValidationChange?: (valid: boolean, errors: ValidationError[]) => void;
@@ -51,7 +51,7 @@ export interface AddressInputProps {
   level1AdministrativePlaceholder?: (label: string) => string;
   disabled?: boolean;
   /** Style applied to the root View (ignored when `inline`). */
-  style?: AddressInputStyles["root"];
+  style?: AddressInputStyles['root'];
   /** Per-slot style overrides for the default-rendered fields. */
   styles?: Partial<AddressInputStyles>;
   renderInput?: (props: RenderInputProps) => ReactNode;
@@ -66,53 +66,23 @@ export interface AddressInputProps {
    * render in place of the default column layout.
    */
   renderFields?: (fields: RenderFieldEntry[]) => ReactNode;
-}
-
-const EMPTY_VALUE: AddressValue = {
-  line1: "",
-  line2: "",
-  city: "",
-  level1: "",
-  postalCode: "",
-  country: "",
+  ref?: React.Ref<AddressInputHandle>;
 };
 
-export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(function AddressInput(
-  {
-    value,
-    onChange,
-    onValidationChange,
-    mode = "full",
-    validationMode = "onType",
-    inline = false,
-    disabled = false,
-    style,
-    styles,
-    defaultCountry,
-    defaultRegion,
-    countryPlaceholder = "Select country",
-    level1AdministrativePlaceholder = (label) => `Select ${label}`,
-    renderInput,
-    renderCountrySelect,
-    renderLevel1AdministrativeSelect,
-    renderContainer,
-    renderFields,
-  }: AddressInputProps,
-  ref,
-) {
+export const AddressInput = function AddressInput(props: AddressInputProps) {
+  const { value, onChange, onValidationChange, mode = 'full', validationMode = 'onType', inline = false } = props;
+  const { disabled = false, style, styles, defaultCountry, defaultRegion, renderFields, ref } = props;
+  const { countryPlaceholder = 'Select country', level1AdministrativePlaceholder = (label) => `Select ${label}` } = props;
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const [errors, setErrors] = useState<ValidationError[]>([]);
 
-  const effectiveCountry = value.country || defaultCountry || "";
-  const effectiveLevel1 = value.level1 || defaultRegion || "";
-  const currentValue = {
+  const currentValue: AddressValue = {
     ...EMPTY_VALUE,
     ...value,
-    country: effectiveCountry,
-    level1: effectiveLevel1,
+    country: value.country || defaultCountry || '',
+    level1: value.level1 || defaultRegion || '',
   };
-  const countryConfig = getCountryConfig(currentValue.country);
-  const countryAtBottom = !!defaultCountry;
+  const countryAtBottom = Boolean(defaultCountry);
 
   const runValidation = useCallback(
     (val: AddressValue): ValidationResult => {
@@ -128,8 +98,8 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
     [onValidationChange, mode],
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-run on country change
-  useEffect(() => {
+  // Re-validate (and notify the parent) whenever the selected country changes.
+  useReactiveEffect(() => {
     runValidation(currentValue);
   }, [currentValue.country]);
 
@@ -140,194 +110,54 @@ export const AddressInput = forwardRef<AddressInputHandle, AddressInputProps>(fu
   validateRef.current = () => {
     const result = runValidation(currentValue);
     // Reveal every error by marking all collected fields (plus country) touched.
-    const allFields = ["country", ...computeEffectiveFields(mode, currentValue.country)];
+    const allFields = ['country', ...computeEffectiveFields(mode, currentValue.country)];
     setTouched((t) => ({ ...t, ...Object.fromEntries(allFields.map((f) => [f, true])) }));
     return result;
   };
   useImperativeHandle(ref, () => ({ validate: () => validateRef.current() }), []);
 
-  function handleField(field: keyof AddressValue) {
-    return (text: string) => {
-      const next: AddressValue = { ...currentValue, [field]: text };
-      if (field === "country") {
-        next.level1 = "";
-        next.postalCode = "";
-      }
-      onChange(next);
-      // "onType" reveals errors as the user edits; "onBlur"/"onSubmit" wait.
-      if (validationMode === "onType") setTouched((t) => ({ ...t, [field]: true }));
-      runValidation(next);
-    };
-  }
+  const handleField = (field: keyof AddressValue) => (text: string) => {
+    const next: AddressValue = { ...currentValue, [field]: text };
+    if (field === 'country') {
+      next.level1 = '';
+      next.postalCode = '';
+    }
+    onChange(next);
+    // "onType" reveals errors as the user edits; "onBlur"/"onSubmit" wait.
+    if (validationMode === 'onType') setTouched((t) => ({ ...t, [field]: true }));
+    runValidation(next);
+  };
 
-  function handleBlur(field: string) {
+  const handleBlur = (field: string) => {
     // Blur reveals a field's error in every mode except "onSubmit", where
     // errors stay hidden until validate() is called.
-    if (validationMode === "onSubmit") return;
-    setTouched((t) => ({ ...t, [field]: true }));
-  }
+    if (validationMode !== 'onSubmit') setTouched((t) => ({ ...t, [field]: true }));
+  };
 
-  function getError(field: string): string | undefined {
-    if (!touched[field]) return undefined;
-    return errors.find((e) => e.field === field)?.message;
-  }
+  const getError = (field: string): string | undefined =>
+    touched[field] ? errors.find((e) => e.field === field)?.message : undefined;
 
-  const effectiveFieldOrder = computeEffectiveFields(mode, currentValue.country);
-
-  // --- Default render helpers ---
-
-  function renderInputEl(props: RenderInputProps) {
-    if (renderInput) return renderInput(props);
-    const inputStyle: StyleProp<TextStyle> = [
-      defaultStyles.input,
-      props.invalid && defaultStyles.inputInvalid,
-      props.disabled && defaultStyles.inputDisabled,
-      props.style,
-    ];
-    return (
-      <TextInput
-        testID={props.id}
-        nativeID={props.id}
-        style={inputStyle}
-        value={props.value}
-        onChangeText={props.onChangeText}
-        onBlur={props.onBlur}
-        placeholder={props.placeholder}
-        placeholderTextColor="#94a3b8"
-        editable={!props.disabled}
-        accessibilityLabel={props.accessibilityLabel}
-        aria-label={props.accessibilityLabel}
-        aria-required={props.required}
-        aria-invalid={props.invalid}
-      />
-    );
-  }
-
-  function renderCountrySelectEl(props: RenderSelectProps) {
-    if (renderCountrySelect) return renderCountrySelect(props);
-    return <Select {...props} />;
-  }
-
-  function renderLevel1AdministrativeSelectEl(props: RenderSelectProps) {
-    if (renderLevel1AdministrativeSelect) return renderLevel1AdministrativeSelect(props);
-    return <Select {...props} />;
-  }
-
-  function renderContainerEl(containerProps: RenderContainerProps) {
-    if (renderContainer) return renderContainer(containerProps);
-    return (
-      <View style={[defaultStyles.field, containerProps.style]}>
-        <Text nativeID={`${containerProps.id}-label`} style={[defaultStyles.label, styles?.label]}>
-          {containerProps.label}
-          {containerProps.required ? <Text style={defaultStyles.required}> *</Text> : null}
-        </Text>
-        {containerProps.children}
-        {containerProps.error ? (
-          <Text testID={`${containerProps.id}-error`} role="alert" style={[defaultStyles.error, styles?.error]}>
-            {containerProps.error}
-          </Text>
-        ) : null}
-      </View>
-    );
-  }
-
-  // --- Country selector ---
-
-  const countryId = "rav-country";
-  const countryError = getError("country");
-
-  const countrySelector = renderContainerEl({
-    id: countryId,
-    fieldKey: "country",
-    label: "Country",
-    required: true,
-    error: countryError,
-    style: styles?.field,
-    children: renderCountrySelectEl({
-      id: countryId,
-      value: currentValue.country,
-      onValueChange: handleField("country"),
-      onBlur: () => handleBlur("country"),
-      disabled,
-      required: true,
-      invalid: countryError !== undefined,
-      accessibilityLabel: "Country",
-      style: styles?.select,
-      options: ALL_COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.name })),
-      placeholder: countryPlaceholder,
-    }),
+  const fieldEntries = buildFieldEntries({
+    currentValue,
+    mode,
+    disabled,
+    countryAtBottom,
+    styles,
+    countryPlaceholder,
+    level1AdministrativePlaceholder,
+    getError,
+    handleField,
+    handleBlur,
+    renderInput: props.renderInput,
+    renderCountrySelect: props.renderCountrySelect,
+    renderLevel1AdministrativeSelect: props.renderLevel1AdministrativeSelect,
+    renderContainer: props.renderContainer,
   });
 
-  const fieldEntries: RenderFieldEntry[] = [];
-
-  if (!countryAtBottom) fieldEntries.push({ type: "country", node: countrySelector });
-
-  if (countryConfig) {
-    for (const fieldKey of effectiveFieldOrder) {
-      const fieldCfg = resolveAddressField(currentValue.country, fieldKey, mode);
-      const error = getError(fieldKey);
-      const inputId = `rav-${fieldKey}`;
-      const currentFieldValue = (currentValue[fieldKey as keyof AddressValue] as string | undefined) ?? "";
-
-      const inputElement = fieldCfg.options
-        ? renderLevel1AdministrativeSelectEl({
-            id: inputId,
-            value: currentFieldValue,
-            onValueChange: handleField(fieldKey),
-            onBlur: () => handleBlur(fieldKey),
-            disabled,
-            required: fieldCfg.required,
-            invalid: error !== undefined,
-            accessibilityLabel: fieldCfg.label,
-            style: styles?.select,
-            options: fieldCfg.options,
-            placeholder: level1AdministrativePlaceholder(fieldCfg.label),
-          })
-        : renderInputEl({
-            id: inputId,
-            value: currentFieldValue,
-            onChangeText: handleField(fieldKey),
-            onBlur: () => handleBlur(fieldKey),
-            placeholder: fieldCfg.placeholder,
-            disabled,
-            required: fieldCfg.required,
-            invalid: error !== undefined,
-            accessibilityLabel: fieldCfg.label,
-            style: styles?.input,
-          });
-
-      fieldEntries.push({
-        type: fieldKey,
-        node: (
-          <Fragment key={fieldKey}>
-            {renderContainerEl({
-              id: inputId,
-              fieldKey,
-              label: fieldCfg.label,
-              required: fieldCfg.required,
-              error,
-              style: styles?.field,
-              children: inputElement,
-            })}
-          </Fragment>
-        ),
-      });
-    }
-  }
-
-  if (countryAtBottom) fieldEntries.push({ type: "country", node: countrySelector });
-
-  const body = renderFields ? (
-    renderFields(fieldEntries)
-  ) : (
-    <>
-      {fieldEntries.map((entry) => (
-        <Fragment key={entry.type}>{entry.node}</Fragment>
-      ))}
-    </>
-  );
+  const body = renderFields
+    ? renderFields(fieldEntries)
+    : fieldEntries.map((entry) => <Fragment key={entry.type}>{entry.node}</Fragment>);
 
   if (inline) return <>{body}</>;
-
   return <View style={[defaultStyles.root, style ?? styles?.root]}>{body}</View>;
-});
+};
