@@ -1,5 +1,11 @@
 # react-native-address-tax
 
+## 2.1.0
+
+### Minor Changes
+
+- [`4e3465f`](https://github.com/iv-stpn/react-native-address-tax/commit/4e3465f0c3dfb01aaa14736193bae052e2d5a73f) Thanks [@iv-stpn](https://github.com/iv-stpn)! - Re-export the `AddressValue` type from the `./validation` entry point so downstream consumers can import it directly.
+
 ## 2.0.0
 
 ### Major Changes
