@@ -43,7 +43,7 @@ jobs:
           node-version: "20"
 
       - name: Upgrade npm (OIDC trusted publishing requires npm >= 11.15)
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
       - name: Create release PR or publish
         id: changesets
         uses: changesets/action@v1
